@@ -1,32 +1,31 @@
-import sys
 import logging
 
 logger = logging.getLogger(__name__)
 
-def stop_process(driver=None, message=None, logger=None):
+
+# Function to get the value after the given word
+def get_after_word(sentence, word):
     """
-    Stops the process by optionally quitting the driver , logs the name of the module it was called from.
+    Extracts the text immediately following a specific word in a sentence.
 
     Args:
-        driver (webdriver, optional): A Selenium WebDriver instance to quit. Defaults to None.
-        message (str, optional): An optional error message to log before exiting. Defaults to None.
-        logger (logging.Logger, optional): A logger instance to use for logging messages. If not provided, a default logger for the current module will be used.
+        sentence: The input sentence (string).
+        word: The word to search for (string).
+
+    Returns:
+        The text immediately following the word, or None if the word is not found
+        or if it's the last word in the sentence.
     """
+    index = sentence.find(word)
+    if index == -1:
+        return None  # Word not found
 
-    if logger is None:
-        logger = logging.getLogger(__name__)
+    index += len(word)
 
-    if message:
-        logger.error(message)
-        print(message)
+    if index >= len(sentence) or sentence[index : index + 1] == "":
+        return None
 
-    if driver:
-        try:
-            driver.quit()
-        except Exception as e:
-            logger.warning(f"Could not quit driver cleanly: {e}")
+    remaining_sentence = sentence[index:].strip()
+    next_word = remaining_sentence.split(" ")[0]
 
-    sys.exit(1)
-
-
-
+    return next_word
