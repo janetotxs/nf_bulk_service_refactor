@@ -17,7 +17,7 @@ nf = NfConstants()
 
 # Function to Start Service Flow Process
 def nf_start_service_flows(
-    dict_steps_type, bs_service_id, bs_worksheet, webdriver, gsheet, bs_row
+    step_type_data, bs_service_id, bs_worksheet, webdriver, gsheet, bs_row
 ):
     global wd
     global gs
@@ -34,8 +34,9 @@ def nf_start_service_flows(
         )
         wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
+        # Execute Flow process from Step and Flow construct
         nf_flow_prepaid_ctl_with_data(
-            dict_steps_type, bs_service_id, bs_worksheet, bs_row
+            step_type_data, bs_service_id, bs_worksheet, bs_row
         )
 
     except Exception as e:
@@ -47,9 +48,7 @@ def nf_start_service_flows(
 
 
 # Function to Execute Flow process Specifically for Prepaid CTL With Data
-def nf_flow_prepaid_ctl_with_data(
-    dict_steps_type_id, bs_service_id, bs_worksheet, bs_row
-):
+def nf_flow_prepaid_ctl_with_data(step_type_data, bs_service_id, bs_worksheet, bs_row):
     try:
         logger.info("Defining flow for Prepaid CTL With Data")
         flow_id = None
@@ -59,7 +58,7 @@ def nf_flow_prepaid_ctl_with_data(
         # Dropdown First Step Field
         wd.perform_action(
             "xpath",
-            f"//select[@name='first_step_id']//option[@value='{dict_steps_type_id['in_charge_id']}' and contains(text(), '{dict_steps_type_id['in_charge_name']}')]",
+            f"//select[@name='first_step_id']//option[@value='{step_type_data['in_charge_id']}' and contains(text(), '{step_type_data['in_charge_name']}')]",
             "click",
         )
 
@@ -80,18 +79,18 @@ def nf_flow_prepaid_ctl_with_data(
 
         # Define step from IN CHARGE to EXTENDS FIRST EXPIRY then update values to Flow worksheet calling gs.inser_new_row
         define_stepfrom_stepto(
-            dict_steps_type_id["in_charge_id"],
-            dict_steps_type_id["in_charge_name"],
-            dict_steps_type_id["extend_first_expiry_id"],
-            dict_steps_type_id["extend_first_expiry_name"],
+            step_type_data["in_charge_id"],
+            step_type_data["in_charge_name"],
+            step_type_data["extend_first_expiry_id"],
+            step_type_data["extend_first_expiry_name"],
         )
 
         # Define step from EXTENDS FIRST EXPIRY to DATA PROV WITH KEYWORD MAPPING then update values to Flow worksheet calling gs.inser_new_row
         define_stepfrom_stepto(
-            dict_steps_type_id["extend_first_expiry_id"],
-            dict_steps_type_id["extend_first_expiry_name"],
-            dict_steps_type_id["data_prov_id"],
-            dict_steps_type_id["data_prov_name"],
+            step_type_data["extend_first_expiry_id"],
+            step_type_data["extend_first_expiry_name"],
+            step_type_data["data_prov_id"],
+            step_type_data["data_prov_name"],
         )
 
         logger.info("FLOW SUCCESSFULLY DEFINED FOR = Prepaid CTL With Data")
@@ -135,7 +134,7 @@ def define_stepfrom_stepto(
     )
 
     # Click 'Add' Button
-    wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+    wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
     wd.wait_until_element(
         "xpath",
         f"//a[@href='index.php?mod=steps&op=details&id={step_type_id_to}']",

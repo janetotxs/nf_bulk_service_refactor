@@ -1,7 +1,7 @@
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from utils.env_loader import get_env_variable
-from utils.helpers import get_after_word
+from utils import helpers as helper
 from utils.logger import setup_logger
 from utils.logger2 import logger
 from nf import flow_service as flow
@@ -23,7 +23,7 @@ def start_nf_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
     wd = webdriver
     gs = gsheet
 
-    # Start looping all the bulk service rows for 'Steps and Flow Construct' process
+    # Start looping all the bulk service success rows for 'Steps and Flow Construct' process
     for row in bs_success_rows:
         try:
             bs_row_data = bs_worksheet.row_values(row)
@@ -35,13 +35,13 @@ def start_nf_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
             )
 
             # Start NF Service Step type process and return dictionary step details
-            dict_steps_type = nf_start_steps_flow_construct(
+            step_type_data = nf_start_steps_flow_construct(
                 bs_row_data, param_worksheet, row
             )
 
             # Start Flow Process to Define Flow from 'step_from' to 'step_to'
             flow.nf_start_service_flows(
-                dict_steps_type, bs_row_data[0], bs_worksheet, wd, gs, row
+                step_type_data, bs_row_data[0], bs_worksheet, wd, gs, row
             )
 
         except Exception as e:
@@ -70,11 +70,11 @@ def nf_start_steps_flow_construct(bs_row_data, param_worksheet, row):
                 f"Steps and Flow Construct - Executing Process => '{bs_row_data[13]}'"
             )
             # Calling function to execute step type for prepaid ctl with data
-            dict_steps_type = step_type_prepaid_ctl_with_data(
+            step_type_data = step_type_prepaid_ctl_with_data(
                 bs_service_id, bs_row_data, param_worksheet
             )
 
-            return dict_steps_type
+            return step_type_data
             # Execute Flow Process to Define Flow 'step from' and 'step to'
             # flows.nf_start_service_flows(dict_steps_type, bs_service_id, row)
 
@@ -89,7 +89,36 @@ def nf_start_steps_flow_construct(bs_row_data, param_worksheet, row):
         gs.update_rpa_remarks_error(row, error_msg)
         logger.info("Terminating Bot")
         wd.stop_process()
-    # --------------------END STEPS PROCESS------------------------#
+
+
+def step_type_prepaid_ctl_with_data(bs_service_id, bs_row_data, param_worksheet):
+    # Declare Dictionary variable
+    dict_steps_type = {}
+
+    # Execute Steps Type Process = IN CHARGE
+    in_charge_data = nf_steps_in_charge(bs_service_id, bs_row_data, param_worksheet)
+
+    # Execute Steps Type Process = EXTENDS FIRST EXPIRY
+    extend_first_expiry_data = nf_steps_extend_first_expiry(
+        bs_service_id, bs_row_data, param_worksheet
+    )
+
+    # Execute Steps Type Process = DATA PROV WITH KEYWORD MAPPING
+    data_prov_with_keyword_mapping_data = nf_steps_data_prov_with_keyword_mapping(
+        bs_service_id, bs_row_data, param_worksheet
+    )
+
+    # Add all keys and value to dict_steps_type dictionary
+    dict_steps_type.update(
+        {
+            **in_charge_data,
+            **extend_first_expiry_data,
+            **data_prov_with_keyword_mapping_data,
+        }
+    )
+    logger.info(f"Successfully Retreived Step Type Ids and Names: {dict_steps_type}")
+
+    return dict_steps_type
 
 
 # Function to enter default values to inputs
@@ -107,7 +136,6 @@ def nf_steps_default_input(name_value, steps_type_element):
 # Function to execute process for step type IN CHARGE
 def nf_steps_in_charge(bs_service_id, bs_row_data, param_worksheet):
     try:
-        steps_type_id_name = []
         # Redirect to Add Service Steps Page with service id
         logger.info("Redirecting to Add Steps Page...")
         wd.driver.get(
@@ -180,16 +208,20 @@ def nf_steps_in_charge(bs_service_id, bs_row_data, param_worksheet):
         ).text
 
         # Get Steps unique ID from success message
-        steps_id = get_after_word(element_value, "step")
+        steps_id = helper.get_after_word(element_value, "step")
         # steps_id = 1021
 
         logger.info(f"Retrieved STEPS ID: {steps_id} for IN CHARGE")
 
         logger.info("STEPS IN CHARGE SUCCESSFULLY DEFINED!")
-        steps_type_id_name.append(steps_id)
-        steps_type_id_name.append("IN_CHARGE")
-        logger.info(f"List IN CHARGE: {steps_type_id_name}")
-        return steps_type_id_name
+
+        # Set Step type result into Dictionary/Object then return
+        dict_step_type_idname = {
+            "in_charge_id": steps_id,
+            "in_charge_name": "IN_CHARGE",
+        }
+        logger.info(f"Step type IN CHARGE result: {dict_step_type_idname}")
+        return dict_step_type_idname
 
     except Exception as e:
         error_msg = f"An error has occurred while processing Step Type IN CHARGE 'nf_steps_in_charge'\n ERROR: {e}"
@@ -200,7 +232,6 @@ def nf_steps_in_charge(bs_service_id, bs_row_data, param_worksheet):
 # Function to execute process for step type EXTENDS FIRST EXPIRY
 def nf_steps_extend_first_expiry(bs_service_id, bs_row_data, param_worksheet):
     try:
-        steps_type_id_name = []
         # Redirect to Add Service Steps Page with service id
         wd.driver.get(
             f"{os.getenv('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
@@ -271,15 +302,20 @@ def nf_steps_extend_first_expiry(bs_service_id, bs_row_data, param_worksheet):
         ).text
 
         # Get Steps unique ID from success message
-        steps_id = get_after_word(element_value, "step")
+        steps_id = helper.get_after_word(element_value, "step")
         # steps_id = 1021
         logger.info(f"Retrieved STEPS ID: {steps_id} for EXTENDS FIRST EXPIRY")
 
         logger.info("STEPS EXTENDS FIRST EXPIRY SUCCESSFULLY DEFINED!")
-        steps_type_id_name.append(steps_id)
-        steps_type_id_name.append("EXTENDS_FIRST_EXPIRY")
-        logger.info(f"List EXTENDS FIRST EXPIRY: {steps_type_id_name}")
-        return steps_type_id_name
+
+        # Set Step type result into Dictionary/Object then return
+        dict_step_type_idname = {
+            "extend_first_expiry_id": steps_id,
+            "extend_first_expiry_name": "EXTENDS_FIRST_EXPIRY",
+        }
+
+        logger.info(f"Step EXTENDS FIRST EXPIRY result: {dict_step_type_idname}")
+        return dict_step_type_idname
 
     except Exception as e:
         logger.info(
@@ -294,7 +330,6 @@ def nf_steps_data_prov_with_keyword_mapping(
     bs_service_id, bs_row_data, param_worksheet
 ):
     try:
-        steps_type_id_name = []
         # Redirect to Add Service Steps Page with service id
         wd.driver.get(
             f"{os.getenv('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
@@ -302,13 +337,14 @@ def nf_steps_data_prov_with_keyword_mapping(
         wd.wait_until_element("id", os.getenv("NF_STEPS_TYPE_DROPDOWN"), "visible")
         print("ARRIVE CURRENT PAGE: ADD STEP")
 
-        # Call function 'nf_steps_default_input' to fill up default values
+        # Call function 'nf_steps_default_input' to fill up the common/generic fields
         nf_steps_default_input(
             bs_row_data[4],
             "//option[contains(text(), 'DATA PROV WITH KEYWORD MAPPING') and @value='95']",
         )
 
-        # Input Jnetx Wallet Type Dropdown
+        # Section to Input Default Values
+        # Input Default Jnetx Wallet Type Dropdown
         wd.perform_action(
             "xpath", f"//option[contains(text(), '{bs_row_data[4]}')]", "click"
         )
@@ -318,7 +354,7 @@ def nf_steps_data_prov_with_keyword_mapping(
             "xpath",
             f"(//input[@name='jnetxprov_walletkeywords2[]'])[1]",
             "sendkeys",
-            "PR_GOEXTRA179GS8GB15DDVB",
+            bs_row_data[4],
         )
 
         # Input Default Data Alloc Field
@@ -326,15 +362,15 @@ def nf_steps_data_prov_with_keyword_mapping(
             "xpath",
             f"(//input[@name='jnetxprov_dataallocs2[]'])[1]",
             "sendkeys",
-            "8GB",
+            f"{int(bs_row_data[18]) // 1024}GB",
         )
 
-        # Input Default Data Alloc Field
+        # Input Default Wallet Amount Field
         wd.perform_action(
             "xpath",
             f"(//input[@name='jnetxprov_walletamounts2[]'])[1]",
             "sendkeys",
-            8192,
+            bs_row_data[18],
         )
 
         # Input Default SDM Prov Keyword Field
@@ -342,7 +378,7 @@ def nf_steps_data_prov_with_keyword_mapping(
             "xpath",
             f"(//input[@name='jnetxprov_sdmprovkeyword2[]'])[1]",
             "sendkeys",
-            "PR_GOEXTRA179GS8GB15DDVB",
+            bs_row_data[17],
         )
 
         # Get ParamMatrix rows that equals to current Bulk service name
@@ -430,16 +466,23 @@ def nf_steps_data_prov_with_keyword_mapping(
         ).text
 
         # Get Steps unique ID from success message
-        steps_id = get_after_word(element_value, "step")
+        steps_id = helper.get_after_word(element_value, "step")
         logger.info(
             f"Retrieved STEPS ID: {steps_id} for DATA PROV WITH KEYWORD MAPPING"
         )
 
         logger.info("STEPS EXTENDS FIRST EXPIRY SUCCESSFULLY DEFINED!")
-        steps_type_id_name.append(steps_id)
-        steps_type_id_name.append(bs_row_data[4])
-        logger.info(f"List DATA PROV WITH KEYWORD MAPPING: {steps_type_id_name}")
-        return steps_type_id_name
+
+        # Set Step type result into Dictionary/Object then return
+        dict_step_type_idname = {
+            "data_prov_id": steps_id,
+            "data_prov_name": bs_row_data[4],
+        }
+
+        logger.info(
+            f"Setp DATA PROV WITH KEYWORD MAPPING result: {dict_step_type_idname}"
+        )
+        return dict_step_type_idname
 
     except Exception as e:
         logger.info(
@@ -457,34 +500,5 @@ def handle_steps_final(final_value):
         pass
 
 
-def step_type_prepaid_ctl_with_data(bs_service_id, bs_row_data, param_worksheet):
-    # Declare Dictionary variable
-    dict_steps_type = {}
-
-    # Execute Steps Type Process = IN CHARGE
-    list_in_charge = nf_steps_in_charge(bs_service_id, bs_row_data, param_worksheet)
-    # Added IN CHARGE ID to 'dict_steps_type' Dictionary/Object
-    dict_steps_type = {
-        "in_charge_id": list_in_charge[0],
-        "in_charge_name": list_in_charge[1],
-    }
-
-    # Execute Steps Type Process = EXTENDS FIRST EXPIRY
-    list_extend_first_expiry = nf_steps_extend_first_expiry(
-        bs_service_id, bs_row_data, param_worksheet
-    )
-    # Added EXTEND FIRST EXPIRY to 'dict_steps_type' Dictionary/Object
-    dict_steps_type["extend_first_expiry_id"] = list_extend_first_expiry[0]
-    dict_steps_type["extend_first_expiry_name"] = list_extend_first_expiry[1]
-
-    # Execute Steps Type Process = DATA PROV WITH KEYWORD MAPPING
-    list_data_prov_with_keyword_mapping = nf_steps_data_prov_with_keyword_mapping(
-        bs_service_id, bs_row_data, param_worksheet
-    )
-    # Added DATA PROV WITH KEYWORD MAPPING ID to 'dict_steps_type' Dictionary/Object
-    dict_steps_type["data_prov_id"] = list_data_prov_with_keyword_mapping[0]
-    dict_steps_type["data_prov_name"] = list_data_prov_with_keyword_mapping[1]
-
-    logger.info(f"Retreived Success Step Type IDs: {dict_steps_type}")
-
-    return dict_steps_type
+def nf_step_type_in_prov_service():
+    "TODO"
