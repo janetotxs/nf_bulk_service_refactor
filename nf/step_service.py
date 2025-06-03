@@ -170,18 +170,18 @@ def nf_steps_in_charge(bs_service_id, bs_row_data, param_worksheet):
                 )
 
         # Click 'Add' button to submit.
-        # wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+        wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
 
         # Wait for the success message element to appear.
-        # wd.wait_until_element("xpath", "(//div[@id='content']//div)[1]", "visible")
-        # print("GET ELEMENT")
-        # element_value = wd.driver.find_element(
-        #    By.XPATH, "(//div[@id='content']//div)[1]"
-        # ).text
+        wd.wait_until_element("xpath", "(//div[@id='content']//div)[1]", "visible")
+        print("GET ELEMENT")
+        element_value = wd.driver.find_element(
+            By.XPATH, "(//div[@id='content']//div)[1]"
+        ).text
 
         # Get Steps unique ID from success message
-        # steps_id = cs.get_after_word(element_value, "step")
-        steps_id = 1021
+        steps_id = get_after_word(element_value, "step")
+        # steps_id = 1021
 
         logger.info(f"Retrieved STEPS ID: {steps_id} for IN CHARGE")
 
@@ -262,17 +262,17 @@ def nf_steps_extend_first_expiry(bs_service_id, bs_row_data, param_worksheet):
                 logger.info("Additional Param not Found")
 
         # Click 'Add' button to submit.
-        # wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+        wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
 
-        # # Wait for the success message element to appear.
-        # wd.wait_until_element("xpath", "(//div[@id='content']//div)[1]", "visible")
-        # element_value = wd.driver.find_element(
-        #     By.XPATH, "(//div[@id='content']//div)[1]"
-        # ).text
+        # Wait for the success message element to appear.
+        wd.wait_until_element("xpath", "(//div[@id='content']//div)[1]", "visible")
+        element_value = wd.driver.find_element(
+            By.XPATH, "(//div[@id='content']//div)[1]"
+        ).text
 
         # Get Steps unique ID from success message
-        # steps_id = cs.get_after_word(element_value, "step")
-        steps_id = 1021
+        steps_id = get_after_word(element_value, "step")
+        # steps_id = 1021
         logger.info(f"Retrieved STEPS ID: {steps_id} for EXTENDS FIRST EXPIRY")
 
         logger.info("STEPS EXTENDS FIRST EXPIRY SUCCESSFULLY DEFINED!")
@@ -421,17 +421,16 @@ def nf_steps_data_prov_with_keyword_mapping(
                 logger.info("Additional Param not Found")
 
         # Click 'Add' button to submit.
-        # wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+        wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
 
-        # # Wait for the success message element to appear.
-        # wd.wait_until_element("xpath", "(//div[@id='content']//div)[1]", "visible")
-        # element_value = wd.driver.find_element(
-        #     By.XPATH, "(//div[@id='content']//div)[1]"
-        # ).text
+        # Wait for the success message element to appear.
+        wd.wait_until_element("xpath", "(//div[@id='content']//div)[1]", "visible")
+        element_value = wd.driver.find_element(
+            By.XPATH, "(//div[@id='content']//div)[1]"
+        ).text
 
         # Get Steps unique ID from success message
-        # steps_id = cs.get_after_word(element_value, "step")
-        steps_id = 1021
+        steps_id = get_after_word(element_value, "step")
         logger.info(
             f"Retrieved STEPS ID: {steps_id} for DATA PROV WITH KEYWORD MAPPING"
         )

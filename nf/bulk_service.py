@@ -26,7 +26,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
     list_service_id = []
 
     # Service ID for TEST ONLY
-    service_id = 3540
+    # service_id = 3540
 
     column_rpa_remarks_count = bs_worksheet.col_count
     column_date_count = bs_worksheet.col_count - 1
@@ -165,15 +165,15 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             # handle_bs_community_pool(row_data[13])
 
             # Click Add button
-            # wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+            wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
 
             # Get Bulk Services Service Id from Success Message Text
-            # wd.wait_until_element("xpath", "//div[@class='success']", "visible")
-            # success_msg = wd.driver.find_element(
-            #    By.XPATH, "//div[@class='success']"
-            # ).text
-            # word_service_id = get_after_word(success_msg, "Service with id:")
-            # service_id = word_service_id.replace(".", "")
+            wd.wait_until_element("xpath", "//div[@class='success']", "visible")
+            success_msg = wd.driver.find_element(
+                By.XPATH, "//div[@class='success']"
+            ).text
+            word_service_id = get_after_word(success_msg, "Service with id:")
+            service_id = word_service_id.replace(".", "")
 
             logger.info(f"BULK SERVICES PROCESS DONE! SERVICE ID CREATED: {service_id}")
 
