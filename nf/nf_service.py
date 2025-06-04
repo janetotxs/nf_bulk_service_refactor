@@ -81,7 +81,7 @@ def process_sequence(wd, gs):
 
     # Start defining Steps, using rows successfully created from Bulk Services.
     step.nf_start_service_steps(bulk_service_worksheet, bs_success_rows, wd, gs)
-    print("STEPS DONE!")
+    logger.info("NF PROCESS DONE!")
 
 
 # Clean Up Sequence Function

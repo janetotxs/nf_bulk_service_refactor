@@ -12,6 +12,7 @@ nf = NfConstants()
 
 # Function to start Steps service loop using BS successfully created rows/row
 def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
+    logger.info("STARTING STEP PROCESS CREATION")
     global wd
     global gs
 
@@ -48,14 +49,13 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
         except Exception as e:
             error_msg = f"An error has occurred on 'start_nf_service_steps' function\n ERROR: {e}"
             logger.info(error_msg)
-            gs.update_rpa_remarks_error(row, error_msg)
+            gs.update_rpa_remarks_error(row, error_msg, bs_worksheet)
             continue
 
 
 # Funcion to handle/to determine what step and flow construct to execute
 def nf_start_steps_flow_construct(bs_row_data, param_worksheet, row):
     # --------------------START STEP PROCESS------------------------#
-    logger.info("STARTING PROCESS FOR: ADD SERVICE STEPS")
     # Assign BS Service Id to variable 'bs_service_id'
     bs_service_id = bs_row_data[nf.NF_INDEX_SERVICE_ID]
     steps_id = None
@@ -68,7 +68,7 @@ def nf_start_steps_flow_construct(bs_row_data, param_worksheet, row):
         # Determine what specific process to defining steps and flows for bulk services.
         # Execute Process For Step Type = Prepaid CTL With Data
         logger.info(
-            f"Steps and Flow Construct - Executing Process => '{bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT]}'"
+            f"Step and Flow Construct - Executing Process => '{bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT]}'"
         )
 
         # Calling function to execute step type services for Prepaid CTL
@@ -92,6 +92,6 @@ def nf_start_steps_flow_construct(bs_row_data, param_worksheet, row):
     except Exception as e:
         error_msg = f"Something went wrong in the Process Sequence of 'SERVICE STEP TYPE PROCESS'.\nERROR: {e}"
         logger.info(error_msg)
-        gs.update_rpa_remarks_error(row, error_msg)
         logger.info("Terminating Bot")
         wd.stop_process()
+        raise Exception(error_msg)

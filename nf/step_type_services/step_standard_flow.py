@@ -43,20 +43,16 @@ def sf_construct_prepaid_ctl(
     # If there's a 'unli sms' keyword in Step and Flow Construct value, execute this Steps Type Process = IN PROV SERVICE - UNLI SMS
     if "unli sms" in bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT].lower():
         # Execute Step Type Process = IN PROV SERVICE - UNLI SMS
-        in_prov_sms_data = step_type_in_prov_service_sms(
-            bs_service_id, bs_row_data, param_worksheet
-        )
+        in_prov_sms_data = step_type_in_prov_service_sms(bs_service_id, bs_row_data)
     else:
         in_prov_sms_data = {}
 
     # If there's a 'unli voice' keyword in Step and Flow Construct value, execute this Steps Type Process = IN PROV SERVICE - UNLI VOICE
     if "unli voice" in bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT].lower():
         # Execute Step Type Process = IN PROV SERVICE - UNLI VOICE
-        in_prov_voice_data = step_type_in_prov_service_voice(
-            bs_service_id, bs_row_data, param_worksheet
-        )
+        in_prov_voice_data = step_type_in_prov_service_voice(bs_service_id, bs_row_data)
         # Execute Step Type Process = HLR PLY
-        hlr_ply_data = step_type_hlr_ply(bs_service_id, bs_row_data, param_worksheet)
+        hlr_ply_data = step_type_hlr_ply(bs_service_id, bs_row_data)
     else:
         in_prov_voice_data = {}
         hlr_ply_data = {}
@@ -493,7 +489,7 @@ def step_type_in_prov_service_sms(bs_service_id, bs_row_data):
             "click",
         )
 
-        wd.perform(
+        wd.perform_action(
             "name",
             nf.NF_STEP_FUP_AMOUNT_FIELD,
             "sendkeys",
@@ -564,7 +560,7 @@ def step_type_in_prov_service_voice(bs_service_id, bs_row_data):
             "click",
         )
         # Input FUP Amount Field
-        wd.perform(
+        wd.perform_action(
             "name",
             nf.NF_STEP_FUP_AMOUNT_FIELD,
             "sendkeys",

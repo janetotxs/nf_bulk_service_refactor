@@ -31,7 +31,7 @@ def nf_start_service_flows(
     gs = gsheet
     # --------------------START FLOWS PROCESS------------------------#
     try:
-        logger.info(f"STARTING ADD FLOW PROCESS")
+        logger.info(f"STARTING FLOW PROCESS CREATION")
 
         # Redirect to Add Service Flow Page
         wd.driver.get(
@@ -82,7 +82,7 @@ def nf_flow_prepaid_ctl(
 
         # Click 'Add' Button
         wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
-        logger.info("SERVICE FLOW ADDED")
+        logger.info("SERVICE FLOW SUCCESSFULLY CREATED!")
 
         # FOR TEST ONLY redirect to flow edit page
         # wd.driver.get(
@@ -209,7 +209,7 @@ def nf_flow_prepaid_ctl(
                 step_type_data["data_prov_name"],
             )
 
-        logger.info("FLOW SUCCESSFULLY DEFINED FOR = Prepaid CTL With Data")
+            logger.info("FLOW SUCCESSFULLY DEFINED FOR = Prepaid CTL With Data")
 
         # Call Function from bulk_service to execute defining Default and API Flow of Bulk Services using flow ID and flow name
         bs.nf_assign_api_default_flow(bs_service_id, flow_id, flow_name)
@@ -256,5 +256,5 @@ def define_stepfrom_stepto(
     )
 
     logger.info(
-        f"Flow From: {step_type_id_from} ({step_type_name_from}) To: {step_type_id_to} ({step_type_name_to}) Successfully Added"
+        f"Flow Successfully Added: From: {step_type_id_from} ({step_type_name_from}) To: {step_type_id_to} ({step_type_name_to}) Successfully Added"
     )
