@@ -80,7 +80,7 @@ def process_sequence(wd, gs):
     bs_success_rows = bs.nf_start_bulk_services(bulk_service_worksheet, wd, gs)
 
     # Start defining Steps, using rows successfully created from Bulk Services.
-    step.start_nf_service_steps(bulk_service_worksheet, bs_success_rows, wd, gs)
+    step.nf_start_service_steps(bulk_service_worksheet, bs_success_rows, wd, gs)
     print("STEPS DONE!")
 
 
