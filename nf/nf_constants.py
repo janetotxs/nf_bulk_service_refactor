@@ -17,6 +17,9 @@ class NfConstants:
     NF_INPUT_PASSWORD = "//input[@name='passwd']"
     NF_LOGIN_BUTTON = "login-button"
 
+    # NF BULK SERVICES > ADD PAGE
+    NF_INPUT_NAME = "//input[@name='name']"
+
     # NF DATA INDEX VALUE
     NF_INDEX_SERVICE_ID = 0
     NF_INDEX_NAME = 1
@@ -47,6 +50,15 @@ class NfConstants:
     NF_INDEX_STATUS_KEYWORD = 26
     NF_INDEX_DEPLOYMENT_DATE = 27
     NF_INDEX_RPA_REMARKS = 28
+
+    # NF PARAM MATRIX INDEX VALUE
+    NF_PARAMMATRIX_INDEX_PARAM = 0
+    NF_PARAMMATRIX_INDEX_AMOUNT = 1
+    NF_PARAMMATRIX_INDEX_DURATION_IN_DAYS = 2
+    NF_PARAMMATRIX_INDEX_WALLET_KEYWORD = 3
+    NF_PARAMMATRIX_INDEX_WALLET_AMOUNT = 4
+    NF_PARAMMATRIX_INDEX_SERVICE_NAME = 5
+    NF_PARAMMATRIX_INDEX_SERVICE_ID = 6
 
     # NF BULK SERVICES > ADD PAGE
     NF_BS_NAME = "//input[@name='name']"
@@ -83,6 +95,9 @@ class NfConstants:
 
     # name #hardcode
     NF_BS_TIMEOUT_SEC = "timeout_seconds"
+
+    NF_BS_STATUS_CHARGED_AMOUNT = "status_charge"
+    NF_BS_BALANCE_CHARGED_AMOUNT = "balance_charge"
 
     # name
     NF_BS_SMP_NAME = "smp_name"
@@ -134,12 +149,19 @@ class NfConstants:
 
     # SERVICES STEPS > ADD PAGE
     NF_STEPS_NAME_INPUT = "name"
+    NF_STEPS_TYPE_DROPDOWN = "dd_stype_id"
+    NF_STEP_TYPE_DATA_PROV_KEYWORD_MAPPING = (
+        "//select[@id='dd_stype_id']//option[@value='95']"
+    )
+    NF_STEP_TYPE_DATA_PROV_EXTENSION_KEYWORD_MAPPING = (
+        "//select[@id='dd_stype_id']//option[@value='96']"
+    )
     NF_STEPS_FINAL_CHECKBOX = "final"
     NF_STEPS_RETRY_INPUT = "retry"
 
     # STEP TYPE - IN PROV SERVICE
     NF_STEP_FUP_AMOUNT_FIELD = "fup_amount"
-
+    NF_STEP_AMOUNT_FIELD = "in_fup_step_amount"
     # SERVICES FLOW > ADD PAGE
     NF_FLOWS_NAME_INPUT = "name"
 

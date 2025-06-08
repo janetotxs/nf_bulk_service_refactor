@@ -115,18 +115,18 @@ class GSheetClient:
                     # print(str(data.row) + " = " + data_value)
 
                     # If there's no service id in service id column, continue to define.
-                    if data_value:
-                        logger.info(
-                            f"Service ID Exist: {data_value}, proceed to next param"
-                        )
-                        value = data_value.lower()
-                    else:
-                        print("No Service ID yet")
-                        value = ""
+                    # if data_value:
+                    #     logger.info(
+                    #         f"Service ID Exist: {data_value}, proceed to next param"
+                    #     )
+                    #     value = data_value.lower()
+                    # else:
+                    #     print("No Service ID yet")
+                    #     value = ""
 
-                    if not value:
-                        logger.info(f"Stored pending row: {data.row}")
-                        result.append(data.row)
+                    # if not value:
+                    logger.info(f"Stored ParamMatrix pending row: {data.row}")
+                    result.append(data.row)
 
             else:
                 logger.info("No PARAM to define..")

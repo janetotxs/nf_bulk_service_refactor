@@ -61,7 +61,7 @@ def login_sequence(wd, gs):
         # Input username and password then click Submit button
         wd.perform_action("name", "uname", "sendkeys", username)
         wd.perform_action("name", "passwd", "sendkeys", password)
-        wd.perform_action("id", get_env_variable("NF_LOGIN_BUTTON"), "click")
+        wd.perform_action("id", nf.NF_LOGIN_BUTTON, "click")
         wd.wait_until_element("id", "content", "visible")
         logger.info("Login Successful!")
 
@@ -81,14 +81,23 @@ def process_sequence(wd, gs):
 
     # Start defining Steps, using rows successfully created from Bulk Services.
     step.nf_start_service_steps(bulk_service_worksheet, bs_success_rows, wd, gs)
-    logger.info("NF PROCESS DONE!")
+
+    # Start Clean Up Process
+    cleanup_sequence(wd)
 
 
 # Clean Up Sequence Function
 def cleanup_sequence(wd):
     logger.info("RPA Bot Process Done. Terminating Bot")
+    # logger.info(
+    #     f"\nTimestamp Report: \nRPA Start Time {start_time_info}\nRPA End Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    # )
+    # logger.info("\n--- Bot Duration: %.2f seconds ---" % (time.time() - start_time))
+
     logger.info(
-        f"\nTimestamp Report: \nRPA Start Time {start_time_info}\nRPA End Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        f"\nTimestamp Report:"
+        f"\nRPA Start Time: {start_time_info}"
+        f"\nRPA End Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        f"\n--- Bot Duration: {time.time() - start_time:.2f} seconds ---"
     )
-    logger.info("\n--- Bot Duration: %.2f seconds ---" % (time.time() - start_time))
     wd.stop_process()

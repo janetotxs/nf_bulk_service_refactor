@@ -1,12 +1,8 @@
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
 from utils.env_loader import get_env_variable
-from utils.helpers import get_after_word
-from utils.logger import setup_logger
 from utils.logger2 import logger
 from nf import bulk_service as bs
 from nf.nf_constants import NfConstants
-import os
 
 # logger = setup_logger(service_name=f"NF {__name__}")
 
@@ -16,6 +12,7 @@ nf = NfConstants()
 
 # Function to Start Service Flow Process
 def nf_start_service_flows(
+    double_extend_value,
     step_type_data,
     step_flow_construct_value,
     bs_service_id,
@@ -35,7 +32,7 @@ def nf_start_service_flows(
 
         # Redirect to Add Service Flow Page
         wd.driver.get(
-            f"{os.getenv('WEBTOOL_BASE_URL')}/nf/index.php?mod=flows&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
+            f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=flows&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
         )
         wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
@@ -44,6 +41,7 @@ def nf_start_service_flows(
         # Check if sf value has keyword of prepaid ctl
         if "prepaid ctl" in step_flow_construct_value.lower():
             nf_flow_prepaid_ctl(
+                double_extend_value,
                 step_type_data,
                 bs_service_id,
                 bs_worksheet,
@@ -65,7 +63,12 @@ def nf_start_service_flows(
 
 # Function to Execute Flow process Specifically for Prepaid CTL With Data
 def nf_flow_prepaid_ctl(
-    step_type_data, bs_service_id, bs_worksheet, step_flow_construct_value, bs_row
+    double_extend_value,
+    step_type_data,
+    bs_service_id,
+    bs_worksheet,
+    step_flow_construct_value,
+    bs_row,
 ):
     try:
         logger.info(f"Defining Flow for {step_flow_construct_value}")
@@ -81,7 +84,7 @@ def nf_flow_prepaid_ctl(
         )
 
         # Click 'Add' Button
-        wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+        wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
         logger.info("SERVICE FLOW SUCCESSFULLY CREATED!")
 
         # FOR TEST ONLY redirect to flow edit page
@@ -95,7 +98,7 @@ def nf_flow_prepaid_ctl(
         flow_name = wd.driver.find_element(By.XPATH, "(//div)[88]//div[2]").text
         logger.info(f"Flow ID Retrieved: {flow_id}")
 
-        # Define step from IN CHARGE to EXTENDS FIRST EXPIRY then update values to Flow worksheet calling gs.inser_new_row
+        # Define step from IN CHARGE to EXTENDS FIRST EXPIRY
         define_stepfrom_stepto(
             step_type_data["in_charge_id"],
             step_type_data["in_charge_name"],
@@ -106,11 +109,7 @@ def nf_flow_prepaid_ctl(
         # Determine what Flow to be executed based on Step and Flow Construct
         # Condition for Prepaid CTL with Data, Unli SMS and Unli Voice
         sf_construct_value = step_flow_construct_value.lower()
-        if (
-            "data" in sf_construct_value
-            and "unli sms" in sf_construct_value
-            and "unli voice" in sf_construct_value
-        ):
+        if sf_construct_value == "prepaid ctl with data, unli sms and unli voice":
             # Define step from EXTENDS FIRST EXPIRY to DATA PROV WITH KEYWORD MAPPING
             define_stepfrom_stepto(
                 step_type_data["extend_first_expiry_id"],
@@ -123,32 +122,33 @@ def nf_flow_prepaid_ctl(
             define_stepfrom_stepto(
                 step_type_data["data_prov_id"],
                 step_type_data["data_prov_name"],
-                step_type_data["in_prov_service_sms_id"],
-                step_type_data["in_prov_service_sms_name"],
+                step_type_data["unli_sms_id"],
+                step_type_data["unli_sms_name"],
             )
 
             # Define step from IN PROV SERVICE - Unli SMS to IN PROV SERVICE - Unli Voice
             define_stepfrom_stepto(
-                step_type_data["in_prov_service_sms_id"],
-                step_type_data["in_prov_service_sms_name"],
-                step_type_data["in_prov_service_voice_id"],
-                step_type_data["in_prov_service_voice_name"],
+                step_type_data["unli_sms_id"],
+                step_type_data["unli_sms_name"],
+                step_type_data["unli_voice_id"],
+                step_type_data["unli_voice_name"],
             )
 
             # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-            define_stepfrom_stepto(
-                step_type_data["in_prov_service_voice_id"],
-                step_type_data["in_prov_service_voice_name"],
-                step_type_data["hlr_ply_id"],
-                step_type_data["hlr_ply_name"],
-            )
+            if double_extend_value != "double":
+                define_stepfrom_stepto(
+                    step_type_data["unli_voice_id"],
+                    step_type_data["unli_voice_name"],
+                    step_type_data["hlr_ply_id"],
+                    step_type_data["hlr_ply_name"],
+                )
 
             logger.info(
                 "FLOW SUCCESSFULLY DEFINED FOR = Prepaid CTL With Data, Unli SMS and Unli Voice"
             )
 
         # Condition for Prepaid CTL with Data and Unli SMS
-        elif "data" in sf_construct_value and "unli sms" in sf_construct_value:
+        elif sf_construct_value == "prepaid ctl with data and unli sms":
             # Define step from EXTENDS FIRST EXPIRY to DATA PROV WITH KEYWORD MAPPING then update values to Flow worksheet calling gs.inser_new_row
             define_stepfrom_stepto(
                 step_type_data["extend_first_expiry_id"],
@@ -161,8 +161,8 @@ def nf_flow_prepaid_ctl(
             define_stepfrom_stepto(
                 step_type_data["data_prov_id"],
                 step_type_data["data_prov_name"],
-                step_type_data["in_prov_service_sms_id"],
-                step_type_data["in_prov_service_sms_name"],
+                step_type_data["unli_sms_id"],
+                step_type_data["unli_sms_name"],
             )
 
             logger.info(
@@ -170,37 +170,38 @@ def nf_flow_prepaid_ctl(
             )
 
         # Condition for Prepaid CTL with Unli SMS and Unli Voice
-        elif "unli sms" in sf_construct_value and "unli voice" in sf_construct_value:
+        elif sf_construct_value == "prepaid ctl with unli sms and unli voice":
             # Define step from EXTENDS FIRST EXPIRY to IN PROV SERVICE - Unli SMS
             define_stepfrom_stepto(
                 step_type_data["extend_first_expiry_id"],
                 step_type_data["extend_first_expiry_name"],
-                step_type_data["in_prov_service_sms_id"],
-                step_type_data["in_prov_service_sms_name"],
+                step_type_data["unli_sms_id"],
+                step_type_data["unli_sms_name"],
             )
 
             # Define step from IN PROV SERVICE - Unli SMS to IN PROV SERVICE - Unli Voice
             define_stepfrom_stepto(
-                step_type_data["in_prov_service_sms_id"],
-                step_type_data["in_prov_service_sms_name"],
-                step_type_data["in_prov_service_voice_id"],
-                step_type_data["in_prov_service_voice_name"],
+                step_type_data["unli_sms_id"],
+                step_type_data["unli_sms_name"],
+                step_type_data["unli_voice_id"],
+                step_type_data["unli_voice_name"],
             )
 
             # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-            define_stepfrom_stepto(
-                step_type_data["in_prov_service_voice_id"],
-                step_type_data["in_prov_service_voice_name"],
-                step_type_data["hlr_ply_id"],
-                step_type_data["hlr_ply_name"],
-            )
+            if double_extend_value != "double":
+                define_stepfrom_stepto(
+                    step_type_data["unli_voice_id"],
+                    step_type_data["unli_voice_name"],
+                    step_type_data["hlr_ply_id"],
+                    step_type_data["hlr_ply_name"],
+                )
 
             logger.info(
                 "FLOW SUCCESSFULLY DEFINED FOR = Prepaid CTL With Unli SMS and Unli Voice"
             )
 
         # Condition for Prepaid CTL with Data
-        elif "data" in sf_construct_value:
+        elif sf_construct_value == "prepaid ctl with data":
             # Define step from EXTENDS FIRST EXPIRY to DATA PROV WITH KEYWORD MAPPIN
             define_stepfrom_stepto(
                 step_type_data["extend_first_expiry_id"],
@@ -212,15 +213,16 @@ def nf_flow_prepaid_ctl(
             logger.info("FLOW SUCCESSFULLY DEFINED FOR = Prepaid CTL With Data")
 
         # Call Function from bulk_service to execute defining Default and API Flow of Bulk Services using flow ID and flow name
-        bs.nf_assign_api_default_flow(bs_service_id, flow_id, flow_name)
+        bs.nf_assign_bulk_service_flow(double_extend_value, bs_service_id, flow_id)
         logger.info("Bulk Service Default and API Flow Updated")
 
         # Update current Bulk service RPA Remarks
+        bs_rpa_remarks = f"Bulk Services Successfully Defined {'| STANDARD FLOW: SUCCESS' if double_extend_value == '' else f'| {double_extend_value.upper()}: SUCCESS'}"
         gs.update_row(
             bs_row,
             bs_worksheet.col_count,
             bs_worksheet,
-            f"Bulk Services Successfully Defined",
+            bs_rpa_remarks,
         )
         logger.info(
             f"BULK SERVICE SUCCESSFULLY DEFINED FOR SERVICE ID: {bs_service_id}"
@@ -233,6 +235,9 @@ def nf_flow_prepaid_ctl(
 def define_stepfrom_stepto(
     step_type_id_from, step_type_name_from, step_type_id_to, step_type_name_to
 ):
+    logger.info(
+        f"Assigning Flow - STEP FROM: {step_type_name_from} STEP TO: {step_type_name_to}"
+    )
     # Dropdown Step from Dropdown
     wd.perform_action(
         "xpath",
@@ -256,5 +261,5 @@ def define_stepfrom_stepto(
     )
 
     logger.info(
-        f"Flow Successfully Added: From: {step_type_id_from} ({step_type_name_from}) To: {step_type_id_to} ({step_type_name_to}) Successfully Added"
+        f"Flow Successfully Added: From - {step_type_id_from} ({step_type_name_from}) To: {step_type_id_to} ({step_type_name_to}) Successfully Added"
     )

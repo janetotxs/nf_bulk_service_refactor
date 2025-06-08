@@ -60,22 +60,20 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
 
             # Redirect to ADD BULK SERVICE PAGE
             wd.driver.get(os.getenv("WEBTOOL_BULK_SERVICES_ADD_FULL_URL"))
-            wd.wait_until_element("xpath", os.getenv("NF_INPUT_NAME"), "visible")
+            wd.wait_until_element("xpath", nf.NF_INPUT_NAME, "visible")
 
             logger.info("Filling up Bulk Services Fields...")
 
             # Input Bulk Service Name Field
             wd.perform_action(
                 "xpath",
-                os.getenv("NF_INPUT_NAME"),
+                nf.NF_INPUT_NAME,
                 "sendkeys",
                 row_data[nf.NF_INDEX_NAME],
             )
 
             # Tick Radio button for Service Class DEFAULT = Bulk Service
-            wd.perform_action(
-                "xpath", os.getenv("NF_BS_SERVICE_CLASS_BULK_SERVICE"), "click"
-            )
+            wd.perform_action("xpath", nf.NF_BS_SERVICE_CLASS_BULK_SERVICE, "click")
 
             # Tick Checkbox for Group Status Inquiry
             handle_group_status_inquiry(
@@ -99,7 +97,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             # Input Thread Count Field
             wd.perform_action(
                 "name",
-                os.getenv("NF_BS_THREAD_COUNT_INPUT_NAME"),
+                nf.NF_BS_THREAD_COUNT_INPUT_NAME,
                 "sendkeys",
                 row_data[nf.NF_INDEX_THREAD_COUNT],
             )
@@ -111,33 +109,27 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             handle_nf_bs_brands(row_data[nf.NF_INDEX_BRAND])
 
             # Input Timeout(sec) Field DEFAULT = 60
-            wd.perform_action("name", os.getenv("NF_BS_TIMEOUT_SEC"), "sendkeys", 60)
+            wd.perform_action("name", nf.NF_BS_TIMEOUT_SEC, "sendkeys", 60)
 
             # Input Status Charged-Amount Field DEFAULT = 0
-            wd.perform_action(
-                "name", os.getenv("NF_BS_STATUS_CHARGED_AMOUNT"), "sendkeys", 0
-            )
+            wd.perform_action("name", nf.NF_BS_STATUS_CHARGED_AMOUNT, "sendkeys", 0)
 
             # Input Balance Charged-Amount Field DEFAULT = 0
-            wd.perform_action(
-                "name", os.getenv("NF_BS_BALANCE_CHARGED_AMOUNT"), "sendkeys", 0
-            )
+            wd.perform_action("name", nf.NF_BS_BALANCE_CHARGED_AMOUNT, "sendkeys", 0)
 
             # Input SMP Name Field
             wd.perform_action(
                 "name",
-                os.getenv("NF_BS_SMP_NAME"),
+                nf.NF_BS_SMP_NAME,
                 "sendkeys",
                 row_data[nf.NF_INDEX_SMP_NAME],
             )
 
             # Input Default Access Code Field DEFAULT = 8080
-            wd.perform_action(
-                "name", os.getenv("NF_BS_DEFAULT_ACCESS_CODE"), "sendkeys", 8080
-            )
+            wd.perform_action("name", nf.NF_BS_DEFAULT_ACCESS_CODE, "sendkeys", 8080)
 
             # Input Queue Limit Field DEFAULT = 1000
-            wd.perform_action("name", os.getenv("NF_BS_QUEUE_LIMIT"), "sendkeys", 1000)
+            wd.perform_action("name", nf.NF_BS_QUEUE_LIMIT, "sendkeys", 1000)
 
             # Handle Deprov on Empty Checkbox
             handle_bs_deprov_on_empty(row_data[nf.NF_INDEX_DEPROV_ON_EMPTY])
@@ -149,22 +141,22 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             handle_bs_subscription_less(row_data[nf.NF_INDEX_SUBSCRIPTION_LESS])
 
             # Tick Max Recurrence DEFAULT = 'No Limit'
-            wd.perform_action("id", os.getenv("NF_BS_MAX_RECURRENCE"), "click")
+            wd.perform_action("id", nf.NF_BS_MAX_RECURRENCE, "click")
 
             # Input Max Daily Extensions
-            wd.perform_action("name", os.getenv("NF_BS_MAX_DAILY_EXTENSION"), "clear")
+            wd.perform_action("name", nf.NF_BS_MAX_DAILY_EXTENSION, "clear")
             wd.perform_action(
                 "name",
-                os.getenv("NF_BS_MAX_DAILY_EXTENSION"),
+                nf.NF_BS_MAX_DAILY_EXTENSION,
                 "sendkeys",
                 row_data[nf.NF_INDEX_MAX_DAILY_EXT],
             )
 
             # Input Max Total Extensions
-            wd.perform_action("name", os.getenv("NF_BS_MAX_TOTAL_EXTENSION"), "clear")
+            wd.perform_action("name", nf.NF_BS_MAX_TOTAL_EXTENSION, "clear")
             wd.perform_action(
                 "name",
-                os.getenv("NF_BS_MAX_TOTAL_EXTENSION"),
+                nf.NF_BS_MAX_TOTAL_EXTENSION,
                 "sendkeys",
                 row_data[nf.NF_INDEX_MAX_TOTAL_EXT],
             )
@@ -172,7 +164,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             # Input Promo Name (optional) Field
             wd.perform_action(
                 "name",
-                os.getenv("NF_BS_PROMO_NAME"),
+                nf.NF_BS_PROMO_NAME,
                 "sendkeys",
                 row_data[nf.NF_INDEX_PROMO_NAME],
             )
@@ -181,7 +173,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             # handle_bs_community_pool(row_data[13])
 
             # Click Add button
-            wd.perform_action("xpath", os.getenv("NF_ADD_BTN_INPUT"), "click")
+            wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
             # Get Bulk Services Service Id from Success Message Text
             wd.wait_until_element("xpath", "//div[@class='success']", "visible")
@@ -243,7 +235,7 @@ def handle_nf_bs_include_group_status_inquiry(nf_group_status_inquiry_value):
         element = None
 
         if nf_group_status_inquiry_value.lower() == "yes":
-            element = os.getenv("NF_BS_GROUP_STATUS_INQUIRY")
+            element = nf.NF_BS_GROUP_STATUS_INQUIRY
         else:
             pass
 
@@ -281,13 +273,13 @@ def handle_nf_bs_wallet_type(wallet_type_value):
         element = None
 
         if wallet_type_value.lower() == "sms/voice":
-            element = os.getenv("BS_WALLET_TYPE_SMSVOICE")
+            element = nf.BS_WALLET_TYPE_SMSVOICE
         elif wallet_type_value.lower() == "data":
-            element = os.getenv("BS_WALLET_TYPE_DATA")
+            element = nf.BS_WALLET_TYPE_DATA
         elif wallet_type_value.lower() == "sps":
-            element = os.getenv("BS_WALLET_TYPE_SPS")
+            element = nf.BS_WALLET_TYPE_SPS
         else:
-            element = os.getenv("BS_WALLET_TYPE_CPS")
+            element = nf.BS_WALLET_TYPE_CPS
 
         wd.perform_action("xpath", element, "click")
 
@@ -303,11 +295,11 @@ def handle_nf_bs_status(nf_status_value):
         element = None
 
         if nf_status_value.lower() == "inactive":
-            element = os.getenv("BS_STATUS_INACTIVE")
+            element = nf.BS_STATUS_INACTIVE
         elif nf_status_value.lower() == "no prov":
-            element = os.getenv("BS_STATUS_NOPROV")
+            element = nf.BS_STATUS_NOPROV
         else:
-            element = os.getenv("BS_STATUS_ACTIVE")
+            element = nf.BS_STATUS_NOPROV
 
         wd.perform_action("xpath", element, "click")
 
@@ -355,28 +347,24 @@ def create_nf_ds_new_wallet(wallet_name):
     try:
         logger.info("Creating new wallet: " + wallet_name)
 
-        wd.driver.get(os.getenv("WEBTOOL_DATA_SERVICES_ADD_FULL_URL"))
-        wd.wait_until_element(
-            "name", os.getenv("NF_DATA_SERVICES_INPUT_NAME"), "visible"
-        )
+        wd.driver.get(get_env_variable("WEBTOOL_DATA_SERVICES_ADD_FULL_URL"))
+        wd.wait_until_element("name", nf.NF_DATA_SERVICES_INPUT_NAME, "visible")
 
         # Proceed to input fields in Add Data Services Page
 
         logger.info("CURRENT PAGE: ADD DATA SERVICES")
         wd.perform_action(
-            "name", os.getenv("NF_DATA_SERVICES_INPUT_NAME"), "sendkeys", wallet_name
+            "name", nf.NF_DATA_SERVICES_INPUT_NAME, "sendkeys", wallet_name
         )
-        wd.perform_action(
-            "xpath", os.getenv("NF_DATA_SERVICE_TYPE_WALLET_BASED"), "click"
-        )
+        wd.perform_action("xpath", nf.NF_DATA_SERVICE_TYPE_WALLET_BASED, "click")
         # find("name", os.getenv("NF_DATA_SERVICES_ADD_BUTTON_NAME"), "click")
 
         logger.info("WALLET CREATED FOR " + wallet_name + "- WALLET-BASED")
         time.sleep(3)
 
         # redirect_nf_data_services_add_page()
-        wd.driver.get(os.getenv("WEBTOOL_BULK_SERVICES_ADD_FULL_URL"))
-        wd.wait_until_element("xpath", os.getenv("NF_INPUT_NAME"), "visible")
+        wd.driver.get(get_env_variable("WEBTOOL_BULK_SERVICES_ADD_FULL_URL"))
+        wd.wait_until_element("xpath", nf.NF_INPUT_NAME, "visible")
 
         # in the future handling if there's a unique id for each row.
         "TODO"
@@ -390,9 +378,9 @@ def handle_nf_bs_type(nf_type_value):
         element = None
 
         if nf_type_value == "Time-Based":
-            element = os.getenv("NF_BS_TYPE_TIME_BASED")
+            element = nf.NF_BS_TYPE_TIME_BASED
         else:
-            element = os.getenv("NF_BS_TYPE_WALLET_BASED")
+            element = nf.NF_BS_TYPE_WALLET_BASED
 
         wd.perform_action("xpath", element, "click")
 
@@ -427,9 +415,9 @@ def handle_bs_deprov_on_empty(deprov_value):
     element = None
     try:
         if deprov_value.lower() == "yes":
-            element = os.getenv("NF_BS_DEPROV_ON_EMPTY_YES")
+            element = nf.NF_BS_DEPROV_ON_EMPTY_YES
         else:
-            element = os.getenv("NF_BS_DEPROV_ON_EMPTY_NO")
+            element = nf.NF_BS_DEPROV_ON_EMPTY_NO
 
         wd.perform_action("xpath", element, "click")
 
@@ -445,9 +433,9 @@ def handle_bs_preexpiry_notifs(preexpiry_value):
     element = None
     try:
         if preexpiry_value.lower() == "yes":
-            element = os.getenv("NF_BS_CANCEL_PRE_EXPIRY_YES")
+            element = nf.NF_BS_CANCEL_PRE_EXPIRY_YES
         else:
-            element = os.getenv("NF_BS_CANCEL_PRE_EXPIRY_NO")
+            element = nf.NF_BS_CANCEL_PRE_EXPIRY_NO
 
         wd.perform_action("xpath", element, "click")
 
@@ -463,9 +451,9 @@ def handle_bs_subscription_less(subscription_value):
     element = None
     try:
         if subscription_value.lower() == "yes":
-            element = os.getenv("NF_BS_SUBSCRIPTION_LESS")
+            element = nf.NF_BS_SUBSCRIPTION_LESS
         else:
-            element = os.getenv("NF_BS_NOTSUBSCRIPTION_LESS")
+            element = nf.NF_BS_NOTSUBSCRIPTION_LESS
 
         wd.perform_action("id", element, "click")
 
@@ -481,9 +469,9 @@ def handle_bs_community_pool(community_pool_value):
     element = None
     try:
         if community_pool_value.lower() == "yes":
-            element = os.getenv("NF_BS_COMM_POOL_YES")
+            element = nf.NF_BS_COMM_POOL_YES
         else:
-            element = os.getenv("NF_BS_COMM_POOL_NO")
+            element = nf.NF_BS_COMM_POOL_NO
 
         wd.perform_action("xpath", element, "click")
 
@@ -497,6 +485,9 @@ def handle_bs_community_pool(community_pool_value):
 # Function to define the Service Expiry of Bulk Services
 def nf_add_service_expiry(row_data, service_id):
     try:
+        default_duratin_in_days_value = row_data[
+            nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS
+        ].lower()
         logger.info("Creating Service Expiry...")
         wd.driver.get(
             f"http://10.47.69.195/nf/index.php?mod=service_expiries&op=add&details_id={service_id}"
@@ -504,7 +495,7 @@ def nf_add_service_expiry(row_data, service_id):
         wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
         # If Default Duration in Days value is No Expiry, choose radio button no expiry, else, multiple by 24
-        if "no" in row_data[20].lower():
+        if "no" in default_duratin_in_days_value:
             wd.perform_action("id", "et_2", "click")
         else:
             # Input Expiry
@@ -512,7 +503,7 @@ def nf_add_service_expiry(row_data, service_id):
                 "id",
                 "expiry",
                 "sendkeys",
-                int(row_data[nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS]) * 24,
+                int(default_duratin_in_days_value) * 24,
             )
 
         # Click Add button
@@ -525,26 +516,39 @@ def nf_add_service_expiry(row_data, service_id):
         wd.stop_process()
 
 
-def nf_assign_api_default_flow(bs_service_id, flow_id, flow_name):
+def nf_assign_bulk_service_flow(double_extend_value, bs_service_id, flow_id):
     try:
-        logger.info(f"Assigning Default Flow and API Flow in Bulk Services For: ")
+        # Assign flow and api flow depends if there's a double/extend/none flow
+        logger.info(
+            f"Assigning {double_extend_value.upper()} Flow and {double_extend_value.upper()} API Flow in Bulk Services For: {bs_service_id}"
+        )
+        flow_name = (
+            "double_flow"
+            if double_extend_value == "double"
+            else "extend_flow" if double_extend_value == "extend" else "default_flow"
+        )
+        api_flow_name = (
+            "api_double_flow"
+            if double_extend_value == "double"
+            else "extend_flow" if double_extend_value == "extend" else "api_flow"
+        )
 
         # Redirect to Bulk Service Edit page for current service id
         wd.driver.get(
-            f"{os.getenv('WEBTOOL_BASE_URL')}/nf/index.php?mod=bulk_services&op=edit&id={bs_service_id}"
+            f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=bulk_services&op=edit&id={bs_service_id}"
         )
-        wd.wait_until_element("xpath", os.getenv("NF_ADD_BTN_INPUT"), "visible")
+        wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
         # Input Default Flow Dropwdown
         wd.perform_action(
             "xpath",
-            f"//select[@name='default_flow']//option[@value='{flow_id}' and contains(text(), '{flow_name}')]",
+            f"//select[@name='{flow_name}']//option[@value='{flow_id}']",
             "click",
         )
         # Input API Flow Dropdown
         wd.perform_action(
             "xpath",
-            f"//select[@name='api_flow']//option[@value='{flow_id}' and contains(text(), '{flow_name}')]",
+            f"//select[@name='{api_flow_name}']//option[@value='{flow_id}']",
             "click",
         )
 
