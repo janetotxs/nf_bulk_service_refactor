@@ -76,8 +76,13 @@ def create_keyword(bs_service_id, bs_row_data, double_extend_value=None):
         # Section to fill up the fields
         # Dropdown Operation Field
         wd.perform_action("xpath", selected_keyword_operation, "click")
-        logger.info("Service Keyword Successfully Created!")
+
         # Input Regex Field
         wd.perform_action("name", nf.KEYWORD_REGEX_INPUT, "sendkeys", keyword_value)
+
+        # Click Add Button
+        wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+
+        logger.info("Service Keyword Successfully Created!")
     except Exception as e:
         logger.info(f"An error has occurred while creating keyword\nERROR:{e}")
