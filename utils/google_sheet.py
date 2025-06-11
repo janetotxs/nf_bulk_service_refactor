@@ -41,7 +41,7 @@ class GSheetClient:
 
     # Get row data based on current date.
     def get_pending_rows(self, worksheet, column_date, column_rpa_remarks):
-        logger.info("Checking ParamMatrix...")
+        logger.info("Fetching rows to work on for today...")
         try:
             current_date_cells = worksheet.findall(
                 datetime.datetime.now().strftime("%Y-%m-%d"), in_column=column_date
@@ -60,13 +60,12 @@ class GSheetClient:
                 print(data_value)
                 if not "success" in value or not value:
                     result.append(data.row)
+                    logger.info(f"Pending Row Added: {data.row}")
             print(result)
             return result
 
         except Exception as e:
-            logger.info(
-                f"An error has occurred on function 'get_pending_rows'\nERROR:{e}"
-            )
+            logger.info(f"An error has occurred while fetching rows..\nERROR:{e}")
 
     # Function to Update a specific row via row and column coordinates
     def update_row(self, row, column, worksheet, value):

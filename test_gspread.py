@@ -16,5 +16,6 @@ sh = gc.open_by_key(os.getenv("GSHEET_ID"))
 worksheet = sh.worksheet("BulkService-V2")
 
 records = worksheet.get_all_records()
-
+if records[0]["Provision Keyword"]:
+    print("YES")
 print(records[0])

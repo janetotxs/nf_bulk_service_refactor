@@ -9,7 +9,9 @@ nf = NfConstants()
 
 
 # Start Service Keyword
-def nf_start_service_keyword(double_extend_value, bs_service_id, webdriver, gsheet):
+def nf_start_service_keyword(
+    bs_service_id, bs_row_data, webdriver, gsheet, double_extend_value=None
+):
 
     logger.info("STARTING KEYWORD SERVICE")
     global wd
@@ -18,14 +20,64 @@ def nf_start_service_keyword(double_extend_value, bs_service_id, webdriver, gshe
     wd = webdriver
     gs = gsheet
 
-    # Execute keyword_extend function if its in the Extend flow
-    if double_extend_value == "extend":
-        create_keyword(bs_service_id)
+    # Call create_keyword to create new keyword
+    create_keyword(bs_service_id, bs_row_data, double_extend_value)
 
 
-def create_keyword(bs_service_id):
-    # Redirect to Keyword Add Page using bulk service id
-    wd.get(
-        f"{get_env_variable('WEBTOOL_BASE_URL')}nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
-    )
-    wd.wait_until_element("xpath", nf.KEYWORD_OPERATION, "visible")
+def create_keyword(bs_service_id, bs_row_data, double_extend_value=None):
+    try:
+        logger.info("Creating keyword..")
+        # Declare Keyword Operation Option if Provision, Deprovision, Status or Extend
+        provision_keyword_value = bs_row_data[nf.BS_INDEX_PROVISION_KEYWORD]
+        deprovision_keyword_value = bs_row_data[nf.BS_INDEX_DEPROVISION_KEYWORD]
+        status_keyword_value = bs_row_data[nf.BS_INDEX_STATUS_KEYWORD]
+        extend_keyword_value = bs_row_data[nf.BS_INDEX_EXTEND_KEYWORD]
+
+        # For Extend Flow only
+        if extend_keyword_value and double_extend_value == "extend":
+            keyword_value = extend_keyword_value
+            selected_keyword_operation = nf.KEYWORD_OPERATION_EXTEND
+            operation_string = "Extend"
+
+        # For Declaring Status Keyword and Operation
+        elif status_keyword_value:
+            keyword_value = status_keyword_value
+            selected_keyword_operation = (
+                "foo"  # Mamsh declare mo na lng sa nf_constants dapat naka xpath
+            )
+            operation_string = "Status"
+
+        # For Declaring Deprovision Keyword Declaration
+        elif deprovision_keyword_value:
+            keyword_value = deprovision_keyword_value
+            selected_keyword_operation = (
+                "foo"  # Mamsh declare mo na lng sa nf_constants dapat naka xpath
+            )
+            operation_string = "Deprovision"
+
+        # For Declaring Provision Keyword Declaration
+        elif provision_keyword_value:
+            keyword_value = provision_keyword_value
+            selected_keyword_operation = (
+                "foo"  # Mamsh declare mo na lng sa nf_constants dapat naka xpath
+            )
+            operation_string = "Provision"
+
+        logger.info(
+            f"Keyword Operation: {operation_string} Keyword Value: {keyword_value}"
+        )
+
+        # Redirect to Keyword Add Page using bulk service id
+        wd.get(
+            f"{get_env_variable('WEBTOOL_BASE_URL')}nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
+        )
+        wd.wait_until_element("xpath", nf.KEYWORD_OPERATION, "visible")
+
+        # Section to fill up the fields
+        # Dropdown Operation Field
+        wd.perform_action("xpath", selected_keyword_operation, "click")
+        logger.info("Service Keyword Successfully Created!")
+        # Input Regex Field
+        wd.perform_action("name", nf.KEYWORD_REGEX_INPUT, "sendkeys", keyword_value)
+    except Exception as e:
+        logger.info(f"An error has occurred while creating keyword\nERROR:{e}")
