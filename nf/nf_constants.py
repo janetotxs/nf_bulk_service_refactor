@@ -51,6 +51,9 @@ class NfConstants:
     NF_INDEX_DEPLOYMENT_DATE = 27
     NF_INDEX_RPA_REMARKS = 28
 
+    # NF COLUMN BULK SERVICE
+    COLUMN_BULK_SERVICE_RPA_REMARKS = 29
+
     # NF PARAM MATRIX INDEX VALUE
     NF_PARAMMATRIX_INDEX_PARAM = 0
     NF_PARAMMATRIX_INDEX_AMOUNT = 1
@@ -139,6 +142,7 @@ class NfConstants:
     NF_BS_COMM_POOL_NO = "//input[@name='is_comm_pool' and @value='0']"
 
     NF_ADD_BTN_INPUT = "//input[@type='submit']"
+    NF_STEP_ADD_BTN_INPUT = "//input[@type='submit' and @value='Add']"
 
     # DATA SERVICES > ADD PAGE
     NF_DATA_SERVICES_TITLE = "//div[@id='title']"
@@ -156,8 +160,17 @@ class NfConstants:
     NF_STEP_TYPE_DATA_PROV_EXTENSION_KEYWORD_MAPPING = (
         "//select[@id='dd_stype_id']//option[@value='96']"
     )
+
+    STEP_TYPE_IN_PROV_SERVICE = "//select[@id='dd_stype_id']//option[@value='5']"
+    STEP_TYPE_DATA_EXTEND_WALLET_EXPIRY = (
+        "//select[@id='dd_stype_id']//option[@value='128']"
+    )
+    STEP_TYPE_IN_EXTEND_WALLET_EXPIRY = (
+        "//select[@id='dd_stype_id']//option[@value='127']"
+    )
     NF_STEPS_FINAL_CHECKBOX = "final"
     NF_STEPS_RETRY_INPUT = "retry"
+    STEP_SUCCESS_MESSAGE = "(//div[@id='content']//div)[1]"
 
     # STEP TYPE - IN PROV SERVICE
     NF_STEP_FUP_AMOUNT_FIELD = "fup_amount"
@@ -170,6 +183,27 @@ class NfConstants:
     NF_KEYWORDS_REGEX_INPUT_NAME = "regex"
     NF_KEYWORDS_REPLY = "//input[@name='reply']"
     NF_KEYWORDS_REPLY_DISABLED = "//input[@name='reply' and @disabled]"
+    KEYWORD_OPERATION = "//select[@name='op_id']"
+    KEYWORD_OPERATION_EXTEND = "//select[@name='op_id']//option[@value='39']"
+
+    # PARAM MATRIX INDEX
+    INDEX_PARAM_MATRIX_PARAM = 0
+    INDEX_PARAM_MATRIX_AMOUNT = 1
+    INDEX_PARAM_MATRIX_DURATION = 2
+    INDEX_PARAM_MATRIX_WALLET_KEYWORD = 3
+    INDEX_PARAM_MATRIX_WALLET_AMOUNT = 4
+    INDEX_PARAM_MATRIX_SERVICE_NAME = 5
+    INDEX_PARAM_MATRIX_SERVICE_ID = 6
+    INDEX_PARAM_MATRIX_RPA_REMARKS = 7
+
+    # PARAM MATRIX COLUMN
+    COLUMN_PARAM_MATRIX_SERVICE_NAME = 6
+    COLUMN_PARAM_MATRIX_SERVICE_ID = 7
+    COLUMN_PARAM_MATRIX_RPA_REMARKS = 8
+
+    # STEP TYPE EDIT PAGE
+    EDIT_STEP_INPUT_FIELD_PARAM = "//input[@name='par']"
+    EDIT_STEP_INPUT_FIELD_DURATION = "//input[@name='duration']"
 
 
 class SMPConstants:

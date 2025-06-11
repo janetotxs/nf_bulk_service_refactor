@@ -50,140 +50,149 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             # Service id for test only
             # service_id += 1
 
-            # Get row data using pending rows
+            # Get row data using row number
             row_data = bs_worksheet.row_values(row)
 
             logger.info(f"BATCH {i+1} BULK SERVICES = ROW DATA : {row_data}")
             logger.info(
                 f"STARTING ADD BULK SERVICES PROCESS FOR: {row_data[nf.NF_INDEX_NAME]}"
             )
+            try:
+                # Redirect to ADD BULK SERVICE PAGE
+                url_bs_add_page = get_env_variable("WEBTOOL_BULK_SERVICES_ADD_FULL_URL")
+                wd.driver.get(url_bs_add_page)
+                logger.info("Redirecting to Bulk Service Add Page..s")
+                wd.wait_until_element("xpath", nf.NF_INPUT_NAME, "visible")
+            except Exception as e:
+                logger.info(f"Unable to reach {url_bs_add_page}\nERROR: {e}")
 
-            # Redirect to ADD BULK SERVICE PAGE
-            wd.driver.get(os.getenv("WEBTOOL_BULK_SERVICES_ADD_FULL_URL"))
-            wd.wait_until_element("xpath", nf.NF_INPUT_NAME, "visible")
-
-            logger.info("Filling up Bulk Services Fields...")
-
-            # Input Bulk Service Name Field
-            wd.perform_action(
-                "xpath",
-                nf.NF_INPUT_NAME,
-                "sendkeys",
-                row_data[nf.NF_INDEX_NAME],
-            )
-
-            # Tick Radio button for Service Class DEFAULT = Bulk Service
-            wd.perform_action("xpath", nf.NF_BS_SERVICE_CLASS_BULK_SERVICE, "click")
-
-            # Tick Checkbox for Group Status Inquiry
-            handle_group_status_inquiry(
-                row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY],
-                row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT],
-            )
-
-            # Tick Checkbox for Wallet Type
-            handle_nf_bs_wallet_type(row_data[nf.NF_INDEX_WALLET_TYPE])
-
-            # Validate Wallet Handling => Check if wallet exist, if not, create wallet using function of 'create_nf_ds_new_wallet' method under 'process_wallet' function.
             logger.info(
-                "Checking wallet value before proceeding to bulk services process.."
+                "Bulk Service Add Page Successfully Reached!, filling up Bulk Services Fields..."
             )
-            wallet_status = check_wallet(row_data[nf.NF_INDEX_WALLET])
-            process_wallet(wallet_status)
+            try:
+                # Input Bulk Service Name Field
+                wd.perform_action(
+                    "xpath",
+                    nf.NF_INPUT_NAME,
+                    "sendkeys",
+                    row_data[nf.NF_INDEX_NAME],
+                )
 
-            # Handle NF Status Dropdown option DEFAULT = ACTIVE
-            handle_nf_bs_status("active")
+                # Tick Radio button for Service Class DEFAULT = Bulk Service
+                wd.perform_action("xpath", nf.NF_BS_SERVICE_CLASS_BULK_SERVICE, "click")
 
-            # Input Thread Count Field
-            wd.perform_action(
-                "name",
-                nf.NF_BS_THREAD_COUNT_INPUT_NAME,
-                "sendkeys",
-                row_data[nf.NF_INDEX_THREAD_COUNT],
-            )
+                # Tick Checkbox for Group Status Inquiry and Tick Checkbox for Wallet Type
+                handle_group_status_inquiry(
+                    row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY],
+                    row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT],
+                    row_data[nf.NF_INDEX_WALLET_TYPE],
+                    row_data[nf.NF_INDEX_WALLET],
+                )
 
-            # Handle NF Type Dropwdown option Default = Wallet-Based
-            handle_nf_bs_type("Wallet-Based")
+                # Handle NF Status Dropdown option DEFAULT = ACTIVE
+                handle_nf_bs_status("active")
 
-            # Handle Brands using function 'handle_nf_bs_brands'.
-            handle_nf_bs_brands(row_data[nf.NF_INDEX_BRAND])
+                # Input Thread Count Field
+                wd.perform_action(
+                    "name",
+                    nf.NF_BS_THREAD_COUNT_INPUT_NAME,
+                    "sendkeys",
+                    row_data[nf.NF_INDEX_THREAD_COUNT],
+                )
 
-            # Input Timeout(sec) Field DEFAULT = 60
-            wd.perform_action("name", nf.NF_BS_TIMEOUT_SEC, "sendkeys", 60)
+                # Handle NF Type Dropwdown option Default = Wallet-Based
+                handle_nf_bs_type("Wallet-Based")
 
-            # Input Status Charged-Amount Field DEFAULT = 0
-            wd.perform_action("name", nf.NF_BS_STATUS_CHARGED_AMOUNT, "sendkeys", 0)
+                # Handle Brands using function 'handle_nf_bs_brands'.
+                handle_nf_bs_brands(row_data[nf.NF_INDEX_BRAND])
 
-            # Input Balance Charged-Amount Field DEFAULT = 0
-            wd.perform_action("name", nf.NF_BS_BALANCE_CHARGED_AMOUNT, "sendkeys", 0)
+                # Input Timeout(sec) Field DEFAULT = 60
+                wd.perform_action("name", nf.NF_BS_TIMEOUT_SEC, "sendkeys", 60)
 
-            # Input SMP Name Field
-            wd.perform_action(
-                "name",
-                nf.NF_BS_SMP_NAME,
-                "sendkeys",
-                row_data[nf.NF_INDEX_SMP_NAME],
-            )
+                # Input Status Charged-Amount Field DEFAULT = 0
+                wd.perform_action("name", nf.NF_BS_STATUS_CHARGED_AMOUNT, "sendkeys", 0)
 
-            # Input Default Access Code Field DEFAULT = 8080
-            wd.perform_action("name", nf.NF_BS_DEFAULT_ACCESS_CODE, "sendkeys", 8080)
+                # Input Balance Charged-Amount Field DEFAULT = 0
+                wd.perform_action(
+                    "name", nf.NF_BS_BALANCE_CHARGED_AMOUNT, "sendkeys", 0
+                )
 
-            # Input Queue Limit Field DEFAULT = 1000
-            wd.perform_action("name", nf.NF_BS_QUEUE_LIMIT, "sendkeys", 1000)
+                # Input SMP Name Field
+                wd.perform_action(
+                    "name",
+                    nf.NF_BS_SMP_NAME,
+                    "sendkeys",
+                    row_data[nf.NF_INDEX_SMP_NAME],
+                )
 
-            # Handle Deprov on Empty Checkbox
-            handle_bs_deprov_on_empty(row_data[nf.NF_INDEX_DEPROV_ON_EMPTY])
+                # Input Default Access Code Field DEFAULT = 8080
+                wd.perform_action(
+                    "name", nf.NF_BS_DEFAULT_ACCESS_CODE, "sendkeys", 8080
+                )
 
-            # Handle Cancel Pre-expiry Notifs on Empty Checkbox
-            handle_bs_preexpiry_notifs("no")
+                # Input Queue Limit Field DEFAULT = 1000
+                wd.perform_action("name", nf.NF_BS_QUEUE_LIMIT, "sendkeys", 1000)
 
-            # Handle Subscription-Less Checkbox
-            handle_bs_subscription_less(row_data[nf.NF_INDEX_SUBSCRIPTION_LESS])
+                # Handle Deprov on Empty Checkbox
+                handle_bs_deprov_on_empty(row_data[nf.NF_INDEX_DEPROV_ON_EMPTY])
 
-            # Tick Max Recurrence DEFAULT = 'No Limit'
-            wd.perform_action("id", nf.NF_BS_MAX_RECURRENCE, "click")
+                # Handle Cancel Pre-expiry Notifs on Empty Checkbox
+                handle_bs_preexpiry_notifs("no")
 
-            # Input Max Daily Extensions
-            wd.perform_action("name", nf.NF_BS_MAX_DAILY_EXTENSION, "clear")
-            wd.perform_action(
-                "name",
-                nf.NF_BS_MAX_DAILY_EXTENSION,
-                "sendkeys",
-                row_data[nf.NF_INDEX_MAX_DAILY_EXT],
-            )
+                # Handle Subscription-Less Checkbox
+                handle_bs_subscription_less(row_data[nf.NF_INDEX_SUBSCRIPTION_LESS])
 
-            # Input Max Total Extensions
-            wd.perform_action("name", nf.NF_BS_MAX_TOTAL_EXTENSION, "clear")
-            wd.perform_action(
-                "name",
-                nf.NF_BS_MAX_TOTAL_EXTENSION,
-                "sendkeys",
-                row_data[nf.NF_INDEX_MAX_TOTAL_EXT],
-            )
+                # Tick Max Recurrence DEFAULT = 'No Limit'
+                wd.perform_action("id", nf.NF_BS_MAX_RECURRENCE, "click")
 
-            # Input Promo Name (optional) Field
-            wd.perform_action(
-                "name",
-                nf.NF_BS_PROMO_NAME,
-                "sendkeys",
-                row_data[nf.NF_INDEX_PROMO_NAME],
-            )
+                # Input Max Daily Extensions
+                wd.perform_action("name", nf.NF_BS_MAX_DAILY_EXTENSION, "clear")
+                wd.perform_action(
+                    "name",
+                    nf.NF_BS_MAX_DAILY_EXTENSION,
+                    "sendkeys",
+                    row_data[nf.NF_INDEX_MAX_DAILY_EXT],
+                )
 
-            # Handle Community Pool Checkbox = DEFAULT 'No' for now
-            # handle_bs_community_pool(row_data[13])
+                # Input Max Total Extensions
+                wd.perform_action("name", nf.NF_BS_MAX_TOTAL_EXTENSION, "clear")
+                wd.perform_action(
+                    "name",
+                    nf.NF_BS_MAX_TOTAL_EXTENSION,
+                    "sendkeys",
+                    row_data[nf.NF_INDEX_MAX_TOTAL_EXT],
+                )
 
-            # Click Add button
-            wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                # Input Promo Name (optional) Field
+                wd.perform_action(
+                    "name",
+                    nf.NF_BS_PROMO_NAME,
+                    "sendkeys",
+                    row_data[nf.NF_INDEX_PROMO_NAME],
+                )
 
-            # Get Bulk Services Service Id from Success Message Text
-            wd.wait_until_element("xpath", "//div[@class='success']", "visible")
-            success_msg = wd.driver.find_element(
-                By.XPATH, "//div[@class='success']"
-            ).text
-            word_service_id = get_after_word(success_msg, "Service with id:")
-            service_id = word_service_id.replace(".", "")
+                # Handle Community Pool Checkbox = DEFAULT 'No' for now
+                # handle_bs_community_pool(row_data[13])
 
-            logger.info(f"BULK SERVICES PROCESS DONE! SERVICE ID CREATED: {service_id}")
+                # Click Add button
+                wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+
+                # Get Bulk Services Service Id from Success Message Text
+                wd.wait_until_element("xpath", "//div[@class='success']", "visible")
+                success_msg = wd.driver.find_element(
+                    By.XPATH, "//div[@class='success']"
+                ).text
+                word_service_id = get_after_word(success_msg, "Service with id:")
+                service_id = word_service_id.replace(".", "")
+
+                logger.info(
+                    f"BULK SERVICES PROCESS DONE! SERVICE ID CREATED: {service_id}"
+                )
+
+            except Exception as e:
+                logger.info(
+                    f"Something went wrong while filling up details in Bulk Service page\nERROR: {e}"
+                )
 
             # Start defining Service Expiry
             nf_add_service_expiry(row_data, service_id)
@@ -192,14 +201,19 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             # Insert service id to Service ID Column
             gs.update_row(row, 1, bs_worksheet, service_id)
 
-            # Update RPA Remarks Column
-            gs.update_row(
-                row,
-                bs_worksheet.col_count,
-                bs_worksheet,
-                "Bulk Services Created, in progress defining of steps and flows",
-            )
-            logger.info(f"\nWorksheet Updated: {bs_worksheet}\nRow Updated: {row}")
+            try:
+                # Update RPA Remarks Column
+                gs.update_row(
+                    row,
+                    bs_worksheet.col_count,
+                    bs_worksheet,
+                    "Bulk Services Created, in progress defining of steps and flows",
+                )
+                logger.info(f"\nWorksheet Updated: {bs_worksheet}\nRow Updated: {row}")
+            except Exception as e:
+                logger.info(
+                    f"An error has occurred while updating the NF RPA Remarks\nERROR: {e}"
+                )
 
             list_service_id.append(service_id)
 
@@ -247,7 +261,9 @@ def handle_nf_bs_include_group_status_inquiry(nf_group_status_inquiry_value):
         )
 
 
-def handle_group_status_inquiry(group_status_value, sf_construct_value):
+def handle_group_status_inquiry(
+    group_status_value, sf_construct_value, wallet_type_value, wallet_value
+):
     try:
         element = None
 
@@ -259,6 +275,16 @@ def handle_group_status_inquiry(group_status_value, sf_construct_value):
             pass
 
         wd.perform_action("id", element, "click")
+
+        # Tick Checkbox for Wallet Type
+        handle_nf_bs_wallet_type(wallet_type_value)
+
+        # Validate Wallet Handling => Check if wallet exist, if not, create wallet using function of 'create_nf_ds_new_wallet' method under 'process_wallet' function.
+        logger.info(
+            "Checking wallet value before proceeding to bulk services process.."
+        )
+        wallet_status = check_wallet(wallet_value)
+        process_wallet(wallet_status)
 
     except Exception as e:
         logger.info(
@@ -485,7 +511,7 @@ def handle_bs_community_pool(community_pool_value):
 # Function to define the Service Expiry of Bulk Services
 def nf_add_service_expiry(row_data, service_id):
     try:
-        default_duratin_in_days_value = row_data[
+        default_duration_in_days_value = row_data[
             nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS
         ].lower()
         logger.info("Creating Service Expiry...")
@@ -495,7 +521,7 @@ def nf_add_service_expiry(row_data, service_id):
         wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
         # If Default Duration in Days value is No Expiry, choose radio button no expiry, else, multiple by 24
-        if "no" in default_duratin_in_days_value:
+        if "no" in default_duration_in_days_value:
             wd.perform_action("id", "et_2", "click")
         else:
             # Input Expiry
@@ -503,7 +529,7 @@ def nf_add_service_expiry(row_data, service_id):
                 "id",
                 "expiry",
                 "sendkeys",
-                int(default_duratin_in_days_value) * 24,
+                int(default_duration_in_days_value) * 24,
             )
 
         # Click Add button
@@ -528,9 +554,7 @@ def nf_assign_bulk_service_flow(double_extend_value, bs_service_id, flow_id):
             else "extend_flow" if double_extend_value == "extend" else "default_flow"
         )
         api_flow_name = (
-            "api_double_flow"
-            if double_extend_value == "double"
-            else "extend_flow" if double_extend_value == "extend" else "api_flow"
+            "api_double_flow" if double_extend_value == "double" else "api_flow"
         )
 
         # Redirect to Bulk Service Edit page for current service id
@@ -545,12 +569,13 @@ def nf_assign_bulk_service_flow(double_extend_value, bs_service_id, flow_id):
             f"//select[@name='{flow_name}']//option[@value='{flow_id}']",
             "click",
         )
-        # Input API Flow Dropdown
-        wd.perform_action(
-            "xpath",
-            f"//select[@name='{api_flow_name}']//option[@value='{flow_id}']",
-            "click",
-        )
+        if double_extend_value != "extend":
+            # Input API Flow Dropdown
+            wd.perform_action(
+                "xpath",
+                f"//select[@name='{api_flow_name}']//option[@value='{flow_id}']",
+                "click",
+            )
 
         # Click Update button
         wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")

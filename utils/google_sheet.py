@@ -41,6 +41,7 @@ class GSheetClient:
 
     # Get row data based on current date.
     def get_pending_rows(self, worksheet, column_date, column_rpa_remarks):
+        logger.info("Checking ParamMatrix...")
         try:
             current_date_cells = worksheet.findall(
                 datetime.datetime.now().strftime("%Y-%m-%d"), in_column=column_date
@@ -111,7 +112,7 @@ class GSheetClient:
             if len(current_cells) != 0:
                 for data in current_cells:
                     print(f"data row: {data.row}")
-                    data_value = param_worksheet.cell(data.row, column_service_id).value
+                    # data_value = param_worksheet.cell(data.row, column_service_id).value
                     # print(str(data.row) + " = " + data_value)
 
                     # If there's no service id in service id column, continue to define.
@@ -131,7 +132,7 @@ class GSheetClient:
             else:
                 logger.info("No PARAM to define..")
 
-            print(result)
+            logger.info(f"ParamMatrix Pending Rows: {result}")
             return result
 
         except Exception as e:

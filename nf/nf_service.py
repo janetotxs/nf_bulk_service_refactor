@@ -25,20 +25,22 @@ def process_sequence_nf():
     gs = GSheetClient()
 
     # NF Login Sequence
-    url_param = get_env_variable("WEBTOOL_LOGIN_FULL_URL")
-    wd.redirect_nf_login_page(url_param)
     login_sequence(wd, gs)
 
     # NF Process Sequence
     process_sequence(wd, gs)
 
-    logger.info("DONE PASS!")
-    wd.stop_process()
+    # NF Clean up Sequence
+    cleanup_sequence(wd)
 
 
 # Login Sequence Function.
 def login_sequence(wd, gs):
     try:
+        # Redirect to NF Login Page
+        url_param = get_env_variable("WEBTOOL_LOGIN_FULL_URL")
+        wd.redirect_nf_login_page(url_param)
+
         # Get Credential (from 'Creds' sheet tab) and assign data value to global variable 'creds_data' as array
         logger.info("Account Authorized!, Logging into NF Webtool..")
         try:
@@ -81,9 +83,6 @@ def process_sequence(wd, gs):
 
     # Start defining Steps, using rows successfully created from Bulk Services.
     step.nf_start_service_steps(bulk_service_worksheet, bs_success_rows, wd, gs)
-
-    # Start Clean Up Process
-    cleanup_sequence(wd)
 
 
 # Clean Up Sequence Function
