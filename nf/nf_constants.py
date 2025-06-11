@@ -205,6 +205,10 @@ class NfConstants:
     EDIT_STEP_INPUT_FIELD_PARAM = "//input[@name='par']"
     EDIT_STEP_INPUT_FIELD_DURATION = "//input[@name='duration']"
 
+    # SERVICE EXTENSION EXPIRY ADD PAGE
+    SERVICE_EXTENSION_EXPIRY_PARAM_INPUT = "para"
+    SERVICE_EXTENSION_EXPIRY_EXPIRY_INPUT = "expiry"
+
 
 class SMPConstants:
     GSHEET = "SMP_RolloutDeploymentRecords"

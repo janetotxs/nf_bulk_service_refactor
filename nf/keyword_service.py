@@ -9,24 +9,24 @@ nf = NfConstants()
 
 
 # Start Service Keyword
-def nf_start_service_keyword(
-    bs_service_id, bs_row_data, webdriver, gsheet, double_extend_value=None
-):
+# def nf_start_service_keyword(
+#     bs_service_id, bs_row_data, webdriver, gsheet, double_extend_value=None
+# ):
 
-    logger.info("STARTING KEYWORD SERVICE")
-    global wd
-    global gs
+#     logger.info("STARTING KEYWORD SERVICE")
+#     global wd
+#     global gs
 
-    wd = webdriver
-    gs = gsheet
+#     wd = webdriver
+#     gs = gsheet
 
-    # Call create_keyword to create new keyword
-    create_keyword(bs_service_id, bs_row_data, double_extend_value)
+#     # Call create_keyword to create new keyword
+#     create_keyword(bs_service_id, bs_row_data, double_extend_value)
 
 
-def create_keyword(bs_service_id, bs_row_data, double_extend_value=None):
+def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
     try:
-        logger.info("Creating keyword..")
+        logger.info("Creating Service Keyword...")
         # Declare Keyword Operation Option if Provision, Deprovision, Status or Extend
         provision_keyword_value = bs_row_data[nf.BS_INDEX_PROVISION_KEYWORD]
         deprovision_keyword_value = bs_row_data[nf.BS_INDEX_DEPROVISION_KEYWORD]
@@ -84,5 +84,7 @@ def create_keyword(bs_service_id, bs_row_data, double_extend_value=None):
         wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
         logger.info("Service Keyword Successfully Created!")
+
     except Exception as e:
         logger.info(f"An error has occurred while creating keyword\nERROR:{e}")
+        wd.stop_process()

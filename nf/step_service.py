@@ -1,8 +1,9 @@
 from utils.logger import setup_logger
 from utils.logger2 import logger
-from nf import step_type_services as st
+from nf import prepaid_ctl_service as pctl
 from nf import flow_service as flow
 from nf import keyword_service as key
+from nf import extension_expiry_service as ees
 from nf.nf_constants import NfConstants
 
 # logger = setup_logger(service_name=f"NF {__name__}")
@@ -115,10 +116,14 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
                         row,
                     )
 
-                    # Start Keyword Process (For Extend Flow only)
-                    key.nf_start_service_keyword(
-                        bs_service_id, bs_row_data, wd, gs, double_extend_value
-                    )
+                    if double_extend_true == "extend":
+                        # Start Keyword Process (For Extend Flow only)
+                        key.create_keyword(
+                            bs_service_id, bs_row_data, wd, gs, double_extend_value
+                        )
+
+                        # Start Extension Expiry Service
+                        ees.create_extension_expiry(bs_service_id, bs_row_data, wd)
 
         except Exception as e:
             error_msg = f"An error has occurred on 'start_nf_service_steps' function\n ERROR: {e}"
@@ -151,7 +156,7 @@ def create_step(
 
         # Calling function to execute step type services for Prepaid CTL
         if "prepaid ctl" in step_and_flow_construct_value:
-            step_type_data, incharge_extend_data = st.sf_construct_prepaid_ctl(
+            step_type_data, incharge_extend_data = pctl.start_construct_prepaid_ctl(
                 double_extend_value,
                 old_extend_step_id,
                 bs_service_id,

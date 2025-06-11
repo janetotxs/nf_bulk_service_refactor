@@ -3,6 +3,7 @@ from utils import helpers as helper
 from utils.env_loader import get_env_variable
 from utils.logger import setup_logger
 from utils.logger2 import logger
+from nf import step_type_service
 from nf.nf_constants import NfConstants
 
 # Call Constants
@@ -10,7 +11,7 @@ nf = NfConstants()
 
 
 # Function to start Step and Flow Construct Process for Prepaid CTL
-def sf_construct_prepaid_ctl(
+def start_construct_prepaid_ctl(
     double_extend_value,
     old_extend_step_id,
     bs_service_id,

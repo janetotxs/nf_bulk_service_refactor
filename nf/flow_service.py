@@ -42,7 +42,7 @@ def nf_start_service_flows(
         # Execute Flow process based on Step and Flow construct
         # Check if step and flow construct value has keyword of 'prepaid ctl'
         if "prepaid ctl" in step_flow_construct_value.lower():
-            nf_flow_prepaid_ctl(
+            create_flow_prepaid_ctl(
                 double_extend_value,
                 step_type_data,
                 bs_service_id,
@@ -64,7 +64,7 @@ def nf_start_service_flows(
 
 
 # Function to Execute Flow process Specifically for Prepaid CTL With Data
-def nf_flow_prepaid_ctl(
+def create_flow_prepaid_ctl(
     double_extend_value,
     step_type_data,
     bs_service_id,
