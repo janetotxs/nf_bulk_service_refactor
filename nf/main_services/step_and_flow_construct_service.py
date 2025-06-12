@@ -1,9 +1,11 @@
 from utils.logger import setup_logger
+from utils.env_loader import get_env_variable
 from utils.logger2 import logger
-from nf import prepaid_ctl_service as pctl
-from nf import flow_service as flow
-from nf import keyword_service as key
-from nf import extension_expiry_service as ees
+from nf.prepaid_services import prepaid_ctl_service as pctl
+from nf.main_services import flow_service as flow
+from nf.main_services import keyword_service as key
+from nf.main_services import extension_expiry_service as ees
+from nf.main_services import ssg_service as ssg
 from nf.nf_constants import NfConstants
 
 # logger = setup_logger(service_name=f"NF {__name__}")
@@ -13,7 +15,7 @@ nf = NfConstants()
 
 
 # Function to start Steps service loop using BS successfully created rows/row
-def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
+def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gsheet):
     logger.info("STARTING STEP SERVICE")
     global wd
     global gs
@@ -21,18 +23,20 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
     wd = webdriver
     gs = gsheet
 
-    # Start looping all the bulk service success rows for 'Steps and Flow Construct' process
+    # Section to start loop for all bulk services that are successfully created using array rows for loop
     for row in bs_success_rows:
         try:
-            # Declare Variables and Get Current row values
+            # Get Current Bulk Service row values
             bs_row_data = bs_worksheet.row_values(row)
+
+            # Declare Variables
             bs_service_id = bs_row_data[nf.NF_INDEX_SERVICE_ID]
             with_double_flow_value = bs_row_data[nf.NF_INDEX_WITH_DOUBLE_FLOW].lower()
             with_extend_steps_and_flow_value = bs_row_data[
                 nf.NF_INDEX_WITH_EXTEND_STEPS_AND_FLOW
             ].lower()
 
-            # Declare Dictionary of Double and Extend condition to handle if there's double and/or extend flow.
+            # Declare Dictionary of Base, Double and Extend condition to handle if there's a double and/or extend flow.
             double_extend_conditions = {
                 # Always 'True' include for Standard Flow
                 "": True,
@@ -53,20 +57,20 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
             old_step_type_data = {}
             old_extend_step_id = None
 
-            # Section to start loop for standard, double and/or extend Step Type and Flow.
+            # Section to start nested loop for standard, double and/or extend Step Type and Flow.
             for (
-                double_extend_value,
+                double_extend_key,
                 double_extend_true,
             ) in double_extend_conditions.items():
                 logger.info(
-                    f"CURRENT LOOP: {'STANDARD' if double_extend_value == '' else double_extend_value.upper()}"
+                    f"CURRENT LOOP: {'BASE' if double_extend_key == '' else double_extend_key.upper()} FLOW"
                 )
                 if double_extend_true:
                     logger.info(f"Bulk Service Data Row {row}: {bs_row_data}")
 
                     # Start Steps and Flow construct proccess and return dictionary step details = STEP ID and STEP NAME in dictionary format
                     step_type_data, old_incharge_extend_data = create_step(
-                        double_extend_value,
+                        double_extend_key,
                         old_extend_step_id,
                         bs_row_data,
                         param_worksheet,
@@ -74,10 +78,7 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
                     )
                     # Section to Store the IN CHARGE and EXTEND FIRST EXPIRY data to a temporary variable dictionary to use it for double flow process TEMPORARY DICTIONARY = old_step_type_data
                     # Condition for Standard Flow to start storing the data
-                    if (
-                        double_extend_value != "double"
-                        and double_extend_value != "extend"
-                    ):
+                    if double_extend_key != "double" and double_extend_key != "extend":
                         logger.info(
                             f"STORING DATA TO TEMP. VARIABLE: {old_incharge_extend_data}"
                         )
@@ -89,14 +90,14 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
                             "extend_first_expiry_id"
                         ]
                     # Condition for Double Flow to start using the previous IN CHARGE and EXTEND FIRST EXPIRY data by updating it to step_type_data
-                    elif double_extend_value == "double":
+                    elif double_extend_key == "double":
                         logger.info(
                             f"RE-USING IN CHARGE AND EXTEND FIRST EXPIRY DATA: {old_step_type_data}"
                         )
                         step_type_data.update(old_step_type_data)
 
                     # Condition for Extend Flow to start using the previous EXTEND FIRST EXPIRY WITH ADDITIONAL PARAM data by updating it to step_type_data
-                    elif double_extend_value == "extend":
+                    elif double_extend_key == "extend":
                         logger.info(f"RE-USING EXTEND HLR - PLY {old_step_type_data}")
                         # old_step_type_data.clear()
                         step_type_data["hlr_ply_id"] = old_step_type_data["hlr_ply_id"]
@@ -106,24 +107,48 @@ def nf_start_service_steps(bs_worksheet, bs_success_rows, webdriver, gsheet):
 
                     # Start Flow Process to Define Flow from 'step_from' to 'step_to'
                     flow.nf_start_service_flows(
-                        double_extend_value,
+                        double_extend_key,
                         step_type_data,
-                        bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT],
-                        bs_row_data[nf.NF_INDEX_SERVICE_ID],
+                        bs_row_data,
                         bs_worksheet,
                         wd,
                         gs,
                         row,
                     )
 
-                    if double_extend_true == "extend":
+                    if double_extend_key == "extend":
+
                         # Start Keyword Process (For Extend Flow only)
                         key.create_keyword(
-                            bs_service_id, bs_row_data, wd, gs, double_extend_value
+                            bs_service_id, bs_row_data, wd, double_extend_key
                         )
 
                         # Start Extension Expiry Service
                         ees.create_extension_expiry(bs_service_id, bs_row_data, wd)
+
+            # Start Defining Gyro Command
+            create_gyro_command(
+                bs_row_data[nf.BS_INDEX_GYRO_COMMAND], bs_service_id, wd
+            )
+
+            # Update RPA Remarks when Gyro Success
+            rpa_remarks_gyro = f"{bs_row_data[nf.NF_INDEX_RPA_REMARKS]} | GYRO: SUCCESS"
+            gs.update_row(
+                row, nf.COLUMN_BULK_SERVICE_RPA_REMARKS, bs_worksheet, rpa_remarks_gyro
+            )
+
+            # Start Defining Current Bulk Service in Simple Service Group DATA BAL
+            if bs_row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY].lower() == "yes":
+                ssg.define_bs_simple_service_group(bs_service_id, wd)
+
+                # Update RPA Remarks when Simple Service Group Success
+                rpa_remarks_ssg = f"{bs_row_data[nf.NF_INDEX_RPA_REMARKS]} | SIMPLE SERVICE GROUP: SUCCESS"
+                gs.update_row(
+                    row,
+                    nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
+                    bs_worksheet,
+                    rpa_remarks_ssg,
+                )
 
         except Exception as e:
             error_msg = f"An error has occurred on 'start_nf_service_steps' function\n ERROR: {e}"
@@ -182,3 +207,54 @@ def create_step(
         logger.info(error_msg)
         logger.info("Terminating Bot")
         wd.stop_process()
+
+
+# Function to Define Gyro Command
+def create_gyro_command(command_string, bs_service_id, wd):
+    try:
+        logger.info("STARTING GYRO COMMAND PROCESS")
+
+        # Declare variable
+        url = get_env_variable("WEBTOOL_GYRO_COMMAND_ADD_FULL_URL")
+        array_command = command_string.split(", ")
+
+        # Loop array command values
+        for command_value in array_command:
+            # Redirect to Gyro Command Add page
+            logger.info("Redirecting to Gyro Command Add Page...")
+            wd.driver.get(url)
+            wd.wait_until_element("name", nf.GYRO_COMMAND_FIELD, "visible")
+            logger.info(f"Site has been reached! {url}")
+            logger.info(f"Adding Gyro Command For: {command_value}")
+
+            # Input Command Field
+            wd.perform_action("name", nf.GYRO_COMMAND_FIELD, "sendkeys", command_value)
+
+            # Choose Current Bulk Service - Service ID
+            wd.perform_action(
+                "xpath",
+                f"//select[@name='svc_id']//option[@value='{bs_service_id}']",
+                "click",
+            )
+
+            # Click Add button
+            wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            logger.info(
+                f"Gyro Command '{command_value}' Successfully Created - For Service ID: {bs_service_id}"
+            )
+
+    except Exception as e:
+        logger.info(f"An error has occurred while defining gyro command\nERROR: {e}")
+        wd.stop_process()
+
+
+def redirect_add_step_page(bs_service_id):
+    try:
+        # Redirect to Add Service Step Page using service id
+        logger.info("Redirecting to Add Step Page...")
+        url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
+        wd.driver.get(url_step_page)
+        wd.wait_until_element("id", nf.NF_STEPS_TYPE_DROPDOWN, "visible")
+        logger.info(f"Site Reached! {url_step_page}")
+    except Exception as e:
+        logger.info(f"Unable to reach site {url_step_page}\nERROR: {e}")

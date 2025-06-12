@@ -2,8 +2,8 @@ from utils.env_loader import get_env_variable
 from utils.logger import setup_logger
 from utils.google_sheet import GSheetClient
 from utils.web_driver import WebDriver
-from nf import bulk_service as bs
-from nf import step_service as step
+from nf.main_services import bulk_service as bs
+from nf.main_services import step_and_flow_construct_service as sf
 from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 import datetime
@@ -82,7 +82,7 @@ def process_sequence(wd, gs):
     bs_success_rows = bs.nf_start_bulk_services(bulk_service_worksheet, wd, gs)
 
     # Start defining Steps, using rows successfully created from Bulk Services.
-    step.nf_start_service_steps(bulk_service_worksheet, bs_success_rows, wd, gs)
+    sf.start_step_and_flow_construct(bulk_service_worksheet, bs_success_rows, wd, gs)
 
 
 # Clean Up Sequence Function

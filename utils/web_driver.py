@@ -35,6 +35,7 @@ WAIT_CONDITION_MAP = {
     "clickable": EC.element_to_be_clickable,
 }
 
+
 class WebDriver:
 
     def __init__(self):
@@ -48,7 +49,7 @@ class WebDriver:
             options.add_argument("--no-sandbox")
             options.add_argument("--ignore-ssl-errors=yes")
             options.add_argument("--ignore-certificate-errors")
-            options.add_argument("--log-level=3")  
+            options.add_argument("--log-level=3")
 
             if platform.system() == "Linux":
                 options.add_argument("--headless")
@@ -63,9 +64,14 @@ class WebDriver:
             logger.info(f"Failed to create chrome driver. Error: {e}")
             raise
 
-
     # Function to wait until element to be visible.
-    def wait_until_element(self, locator_type: str, element_value: str, condition: str, timeout: int = DEFAULT_WAIT_TIME):
+    def wait_until_element(
+        self,
+        locator_type: str,
+        element_value: str,
+        condition: str,
+        timeout: int = DEFAULT_WAIT_TIME,
+    ):
         try:
             by_type = LOCATOR_MAP.get(locator_type.lower())
             if by_type is None:
@@ -79,15 +85,21 @@ class WebDriver:
             return driver_wait.until(wait_condition((by_type, element_value)))
 
         except TimeoutException as e:
-            logger.info(f"Timeout waiting for element: ({locator_type}, {element_value}) with condition '{condition}'\nERROR: {e}")
+            logger.info(
+                f"Timeout waiting for element: ({locator_type}, {element_value}) with condition '{condition}'\nERROR: {e}"
+            )
             self.stop_process()
 
         except NoSuchElementException as e:
-            logger.info(f"Element not found! Locator: ({locator_type}, {element_value})\nERROR: {e}")
+            logger.info(
+                f"Element not found! Locator: ({locator_type}, {element_value})\nERROR: {e}"
+            )
             self.stop_process()
 
         except Exception as e:
-            logger.exception(f"Unexpected error occurred while waiting for element: ({locator_type}, {element_value})\nERROR: {e}")
+            logger.exception(
+                f"Unexpected error occurred while waiting for element: ({locator_type}, {element_value})\nERROR: {e}"
+            )
             self.stop_process()
 
     # Method to find element with action.
@@ -116,7 +128,7 @@ class WebDriver:
     # Redirect to  Login page
     def redirect_nf_login_page(self, url):
         try:
-           self.driver.get(url)
+            self.driver.get(url)
         except Exception as e:
             logger.info(f"Unable to access website\nERROR: {e}")
 
@@ -124,3 +136,11 @@ class WebDriver:
         self.driver.quit()
         sys.exit("Exiting script after closing browser.")
 
+    def redirect_to_page(self, url):
+        try:
+            # Redirect to Add Service Step Page using service id
+            logger.info(f"Redirecting to {url}")
+            self.driver.get(url)
+
+        except Exception as e:
+            logger.info(f"Unable to reach site {url}\nERROR: {e}")

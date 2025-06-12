@@ -4,6 +4,7 @@ from utils.env_loader import get_env_variable
 from utils.helpers import get_after_word
 from utils.logger import setup_logger
 from utils.logger2 import logger
+from nf.main_services import expiry_service as es
 from nf.nf_constants import NfConstants
 import time
 import os
@@ -33,7 +34,9 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
 
     # Call 'get_pending_rows' from google_sheet function to get pending rows to process for bulk service
     pending_rows = gs.get_pending_rows(
-        bs_worksheet, column_date_count, column_rpa_remarks_count
+        bs_worksheet,
+        nf.COLUMN_BULK_SERVICE_DEPLOYMENT_DATE,
+        nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
     )
 
     # Check if there's pending rows
@@ -195,7 +198,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
                 )
 
             # Start defining Service Expiry
-            nf_add_service_expiry(row_data, service_id)
+            es.create_service_expiry(row_data, service_id, wd, gs)
 
             # After bulk services is created, get service id and update cell calling "gs.update_row"
             # Insert service id to Service ID Column

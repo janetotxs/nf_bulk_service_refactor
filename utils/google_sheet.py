@@ -4,8 +4,12 @@ import datetime
 from google.oauth2.service_account import Credentials
 from typing import List, Dict, Any
 from utils.env_loader import get_env_variable
+from nf.nf_constants import NfConstants
 
 logger = logging.getLogger(__name__)
+
+# Call Constants
+nf = NfConstants()
 
 
 class GSheetClient:
@@ -92,49 +96,29 @@ class GSheetClient:
             )
 
     # Get row data for ParamMatrix worksheet
-    def get_param_pending_rows(
-        self, param_worksheet, bs_name, column_bs_name, column_service_id
-    ):
+    def get_rows_by_name(self, worksheet, name_to_find, column_count=None):
         try:
-            logger.info(
-                "Checking if there's an input data from ParamMatrix Worksheet related to Bulk Service Name and Service ID"
-            )
-            print(f"bulk service name: {bs_name}")
-            print(f"column bs name: {column_bs_name}")
-            print(f"column service id: {column_service_id}")
+            logger.info(f"Fetching Rows that matches: '{name_to_find}'")
+            logger.info(f"Column: {column_count}")
 
-            # In ParamMatrix worksheet, find current BS name on column 'Service Name'
-            current_cells = param_worksheet.findall(bs_name, in_column=column_bs_name)
+            # find all cells that matches the name_to_find value
+            current_cells = worksheet.findall(name_to_find)
 
-            # Check ParamMatrix Service ID column if there's an existing value to determine the pending entries, if true, append row value to an array variable.
             result = []
             if len(current_cells) != 0:
-                for data in current_cells:
-                    print(f"data row: {data.row}")
-                    # data_value = param_worksheet.cell(data.row, column_service_id).value
-                    # print(str(data.row) + " = " + data_value)
-
-                    # If there's no service id in service id column, continue to define.
-                    # if data_value:
-                    #     logger.info(
-                    #         f"Service ID Exist: {data_value}, proceed to next param"
-                    #     )
-                    #     value = data_value.lower()
-                    # else:
-                    #     print("No Service ID yet")
-                    #     value = ""
-
-                    # if not value:
-                    logger.info(f"Stored ParamMatrix pending row: {data.row}")
-                    result.append(data.row)
-
+                for cell in current_cells:
+                    logger.info(f"Row Fetched: {cell.row}")
+                    result.append(cell.row)
             else:
-                logger.info("No PARAM to define..")
+                logger.info(
+                    f"The bot was unable to find a service name that matches: '{name_to_find}'"
+                )
+                return []
 
-            logger.info(f"ParamMatrix Pending Rows: {result}")
+            logger.info(f"Rows Successfully Fetched: {result}")
             return result
 
         except Exception as e:
             logger.info(
-                f"An error has occurred on function 'get_pending_rows'\nERROR:{e}"
+                f"An error has occurred on function 'get_rows_by_name'\nERROR:{e}"
             )

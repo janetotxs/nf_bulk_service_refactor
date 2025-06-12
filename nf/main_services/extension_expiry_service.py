@@ -1,7 +1,7 @@
 from selenium.webdriver.common.by import By
 from utils.env_loader import get_env_variable
 from utils.logger2 import logger
-from nf import bulk_service as bs
+from nf.main_services import bulk_service as bs
 from nf.nf_constants import NfConstants
 
 # Call Constants
@@ -24,21 +24,19 @@ nf = NfConstants()
 def create_extension_expiry(bs_service_id, bs_row_data, wd):
     try:
         # Redirect to Keyword Add Page using bulk service id
-        logger.info("Creating Service Extension Expiry...")
+        logger.info("STARTING EXTENSION EXPIRY PROCESS")
         wd.get(
             f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_extension_expiries&op=add&details_id={bs_service_id}"
         )
-        wd.wait_until_element(
-            "name", nf.SERVICE_EXTENSION_EXPIRY_PARAM_INPUT, "visible"
-        )
+        wd.wait_until_element("name", nf.SERVICE_PARAM_INPUT, "visible")
 
         # Clear Param Input
-        wd.perform_action("name", nf.SERVICE_EXTENSION_EXPIRY_PARAM_INPUT, "clear")
+        wd.perform_action("name", nf.SERVICE_PARAM_INPUT, "clear")
 
         # Input Param Field
         wd.perform_action(
             "name",
-            nf.SERVICE_EXTENSION_EXPIRY_PARAM_INPUT,
+            nf.SERVICE_PARAM_INPUT,
             "sendkeys",
             bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT],
         )
