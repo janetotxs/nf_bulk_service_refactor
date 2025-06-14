@@ -26,12 +26,6 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
     # ------------------START BULK SERVICES PROCESS----------------------#
     list_service_id = []
 
-    # Service ID for TEST ONLY
-    # service_id = 3540
-
-    column_rpa_remarks_count = bs_worksheet.col_count
-    column_date_count = bs_worksheet.col_count - 1
-
     # Call 'get_pending_rows' from google_sheet function to get pending rows to process for bulk service
     pending_rows = gs.get_pending_rows(
         bs_worksheet,
@@ -41,7 +35,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
 
     # Check if there's pending rows
     if len(pending_rows) == 0:
-        logger.info("No pending rows as of the moment, terminating bot")
+        logger.info("No deployment today to work on, terminating bot...")
         wd.stop_process()
 
     print(f"PENDING ROWS: {pending_rows}")
@@ -328,7 +322,7 @@ def handle_nf_bs_status(nf_status_value):
         elif nf_status_value.lower() == "no prov":
             element = nf.BS_STATUS_NOPROV
         else:
-            element = nf.BS_STATUS_NOPROV
+            element = nf.BS_STATUS_ACTIVE
 
         wd.perform_action("xpath", element, "click")
 

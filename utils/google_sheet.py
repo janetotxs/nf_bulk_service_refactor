@@ -96,10 +96,9 @@ class GSheetClient:
             )
 
     # Get row data for ParamMatrix worksheet
-    def get_rows_by_name(self, worksheet, name_to_find, column_count=None):
+    def get_rows_by_name(self, worksheet, name_to_find):
         try:
             logger.info(f"Fetching Rows that matches: '{name_to_find}'")
-            logger.info(f"Column: {column_count}")
 
             # find all cells that matches the name_to_find value
             current_cells = worksheet.findall(name_to_find)

@@ -52,6 +52,7 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
         # Start Loop for each keyword that is set to True
         for keyword_key, keyword_true in keyword_conditions.items():
             if keyword_true:
+                logger.info(f"Current Loop: {keyword_key}")
                 # Get keyword value and operiations by calling function get_keyword_operation
                 keyword_value, selected_keyword_operation = get_keyword_operation(
                     keyword_key.lower(),
@@ -67,9 +68,9 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
 
                 # Redirect to Keyword Add Page using bulk service id
                 wd.driver.get(
-                    f"{get_env_variable('WEBTOOL_BASE_URL')}nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
+                    f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
                 )
-                wd.wait_until_element("xpath", nf.KEYWORD_OPERATION, "visible")
+                wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
                 logger.info("Site Reached!")
 
                 # Section to fill up the fields

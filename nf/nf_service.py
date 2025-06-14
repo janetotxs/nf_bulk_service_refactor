@@ -84,14 +84,13 @@ def process_sequence(wd, gs):
     # Start defining Steps, using rows successfully created from Bulk Services.
     sf.start_step_and_flow_construct(bulk_service_worksheet, bs_success_rows, wd, gs)
 
+    # Start Defining Messages and Reminder Messages
+    "TODO"
+
 
 # Clean Up Sequence Function
 def cleanup_sequence(wd):
     logger.info("RPA Bot Process Done. Terminating Bot")
-    # logger.info(
-    #     f"\nTimestamp Report: \nRPA Start Time {start_time_info}\nRPA End Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    # )
-    # logger.info("\n--- Bot Duration: %.2f seconds ---" % (time.time() - start_time))
 
     logger.info(
         f"\nTimestamp Report:"

@@ -757,6 +757,11 @@ class StepTypeService:
 
     def step_type_data_extend_wallet_expiry(self, bs_service_id, bs_row_data):
         try:
+            logger.info("Executing Step Type: DATA EXTEND WALLET EXPIRY")
+            url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
+            self.wd.redirect_to_page(url)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
+
             # Declare wallet name
             bs_wallet = f"EXTEND_{bs_row_data[nf.NF_INDEX_WALLET]}"
 

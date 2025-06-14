@@ -14,7 +14,6 @@ nf = NfConstants()
 def nf_start_service_flows(
     double_extend_value,
     step_type_data,
-    bs_row_data,
     bs_worksheet,
     webdriver,
     gsheet,
@@ -28,6 +27,9 @@ def nf_start_service_flows(
 
     # --------------------START FLOWS PROCESS------------------------#
     try:
+        # Create Worksheet once againa for bulk service sheet to get updated value rpa remarks
+        bs_row_data = bs_worksheet.row_values(bs_row)
+
         # Declare Variables
         step_flow_construct_value = bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT]
         bs_service_id = bs_row_data[nf.NF_INDEX_SERVICE_ID]

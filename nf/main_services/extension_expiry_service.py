@@ -25,7 +25,7 @@ def create_extension_expiry(bs_service_id, bs_row_data, wd):
     try:
         # Redirect to Keyword Add Page using bulk service id
         logger.info("STARTING EXTENSION EXPIRY PROCESS")
-        wd.get(
+        wd.driver.get(
             f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_extension_expiries&op=add&details_id={bs_service_id}"
         )
         wd.wait_until_element("name", nf.SERVICE_PARAM_INPUT, "visible")

@@ -50,6 +50,7 @@ class WebDriver:
             options.add_argument("--ignore-ssl-errors=yes")
             options.add_argument("--ignore-certificate-errors")
             options.add_argument("--log-level=3")
+            # options.add_argument("--headless")
 
             if platform.system() == "Linux":
                 options.add_argument("--headless")
@@ -134,13 +135,15 @@ class WebDriver:
 
     def stop_process(self):
         self.driver.quit()
-        sys.exit("Exiting script after closing browser.")
+        sys.exit("Terminating Chromedriver...")
 
     def redirect_to_page(self, url):
         try:
             # Redirect to Add Service Step Page using service id
             logger.info(f"Redirecting to {url}")
             self.driver.get(url)
+            self.driver.implicitly_wait(10)
+            logger.info(f"Site reached! {url}")
 
         except Exception as e:
             logger.info(f"Unable to reach site {url}\nERROR: {e}")

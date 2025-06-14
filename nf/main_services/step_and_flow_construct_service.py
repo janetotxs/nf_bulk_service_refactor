@@ -27,12 +27,12 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
     for row in bs_success_rows:
         try:
             # Get Current Bulk Service row values
-            bs_row_data = bs_worksheet.row_values(row)
+            bs_data = bs_worksheet.row_values(row)
 
             # Declare Variables
-            bs_service_id = bs_row_data[nf.NF_INDEX_SERVICE_ID]
-            with_double_flow_value = bs_row_data[nf.NF_INDEX_WITH_DOUBLE_FLOW].lower()
-            with_extend_steps_and_flow_value = bs_row_data[
+            bs_service_id = bs_data[nf.NF_INDEX_SERVICE_ID]
+            with_double_flow_value = bs_data[nf.NF_INDEX_WITH_DOUBLE_FLOW].lower()
+            with_extend_steps_and_flow_value = bs_data[
                 nf.NF_INDEX_WITH_EXTEND_STEPS_AND_FLOW
             ].lower()
 
@@ -66,6 +66,7 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                     f"CURRENT LOOP: {'BASE' if double_extend_key == '' else double_extend_key.upper()} FLOW"
                 )
                 if double_extend_true:
+                    bs_row_data = bs_worksheet.row_values(row)
                     logger.info(f"Bulk Service Data Row {row}: {bs_row_data}")
 
                     # Start Steps and Flow construct proccess and return dictionary step details = STEP ID and STEP NAME in dictionary format
@@ -76,8 +77,11 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                         param_worksheet,
                         row,
                     )
+
+                    ############ SECTION FOR STEP DATA MANIPULATION ##############
+                    ############ BASE FLOW ##############
                     # Section to Store the IN CHARGE and EXTEND FIRST EXPIRY data to a temporary variable dictionary to use it for double flow process TEMPORARY DICTIONARY = old_step_type_data
-                    # Condition for Standard Flow to start storing the data
+                    # Condition for Base Flow to start storing the data
                     if double_extend_key != "double" and double_extend_key != "extend":
                         logger.info(
                             f"STORING DATA TO TEMP. VARIABLE: {old_incharge_extend_data}"
@@ -89,13 +93,18 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                         old_extend_step_id = old_incharge_extend_data[
                             "extend_first_expiry_id"
                         ]
+                    ######################################
+
+                    ############ DOUBLE FLOW ##############
                     # Condition for Double Flow to start using the previous IN CHARGE and EXTEND FIRST EXPIRY data by updating it to step_type_data
                     elif double_extend_key == "double":
                         logger.info(
                             f"RE-USING IN CHARGE AND EXTEND FIRST EXPIRY DATA: {old_step_type_data}"
                         )
                         step_type_data.update(old_step_type_data)
+                    #######################################
 
+                    ############ EXTEND FLOW ##############
                     # Condition for Extend Flow to start using the previous EXTEND FIRST EXPIRY WITH ADDITIONAL PARAM data by updating it to step_type_data
                     elif double_extend_key == "extend":
                         logger.info(f"RE-USING EXTEND HLR - PLY {old_step_type_data}")
@@ -104,25 +113,24 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                         step_type_data["hlr_ply_name"] = old_step_type_data[
                             "hlr_ply_name"
                         ]
+                    #######################################
 
                     # Start Flow Process to Define Flow from 'step_from' to 'step_to'
                     flow.nf_start_service_flows(
                         double_extend_key,
                         step_type_data,
-                        bs_row_data,
                         bs_worksheet,
                         wd,
                         gs,
                         row,
                     )
 
+                    #### EXTEND FLOW - CREATE KEYWORD AND EXTENSION EXPIRY ####
                     if double_extend_key == "extend":
-
                         # Start Keyword Process (For Extend Flow only)
                         key.create_keyword(
                             bs_service_id, bs_row_data, wd, double_extend_key
                         )
-
                         # Start Extension Expiry Service
                         ees.create_extension_expiry(bs_service_id, bs_row_data, wd)
 
@@ -142,6 +150,7 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                 ssg.define_bs_simple_service_group(bs_service_id, wd)
 
                 # Update RPA Remarks when Simple Service Group Success
+                bs_row_data = bs_worksheet.row_values(row)
                 rpa_remarks_ssg = f"{bs_row_data[nf.NF_INDEX_RPA_REMARKS]} | SIMPLE SERVICE GROUP: SUCCESS"
                 gs.update_row(
                     row,
@@ -149,6 +158,35 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                     bs_worksheet,
                     rpa_remarks_ssg,
                 )
+            try:
+                # Update Gsheet by inserting bulk service id to gsheet tab 'Message' service id column
+                logger.info("Inserting Bulk Service Id to 'Messages' tab")
+                # Create Worksheet For Messages
+                messages_worksheet = gs.create_worksheet(
+                    nf.WORKSHEET_TAB_BULK_SERVICES_TAB_MESSAGES
+                )
+                bs_name = bs_row_data[nf.NF_INDEX_NAME]
+
+                # Get All rows that matches the bulk service name in Messages sheet tab
+                messages_rows = gs.get_rows_by_name(messages_worksheet, bs_name)
+
+                # Loop to update cells for each row
+                if len(messages_rows) != 0:
+                    for row in messages_rows:
+                        gs.update_cell(
+                            row,
+                            nf.COLUMN_MESSAGES_SERVICE_ID,
+                            messages_worksheet,
+                            bs_service_id,
+                        )
+                        logger.info(
+                            f"Messages Row: {row} Updated With Service Id: {bs_service_id}"
+                        )
+                else:
+                    logger.info("No 'Messages' row to update..")
+
+            except Exception as e:
+                error_msg = f"An error has occurred while updating 'Messages' sheet tab\n ERROR: {e}"
 
         except Exception as e:
             error_msg = f"An error has occurred on 'start_nf_service_steps' function\n ERROR: {e}"
@@ -248,11 +286,11 @@ def create_gyro_command(command_string, bs_service_id, wd):
         wd.stop_process()
 
 
-def redirect_add_step_page(bs_service_id):
+def redirect_add_step_page(bs_service_id, wd):
     try:
         # Redirect to Add Service Step Page using service id
-        logger.info("Redirecting to Add Step Page...")
         url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
+        logger.info(f"Redirecting to Add Step Page: {url_step_page}")
         wd.driver.get(url_step_page)
         wd.wait_until_element("id", nf.NF_STEPS_TYPE_DROPDOWN, "visible")
         logger.info(f"Site Reached! {url_step_page}")

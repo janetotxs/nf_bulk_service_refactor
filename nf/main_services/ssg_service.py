@@ -10,7 +10,7 @@ nf = NfConstants()
 
 
 # Function to define the created bulk service to simple service group
-def define_bs_simple_service_group(bs_service_id, bs_rpa_remarks_value, wd):
+def define_bs_simple_service_group(bs_service_id, wd):
     try:
         logger.info("STARTING SIMPLE SERVICE GROUP PROCESS")
         # Redirect to Simple Service Group Details Page
