@@ -78,8 +78,8 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                         row,
                     )
 
-                    ############ SECTION FOR STEP DATA MANIPULATION ##############
-                    ############ BASE FLOW ##############
+                    ############ SECTION FOR STEP TYPE DATA MANIPULATION ##############
+                    ############ LOOP WHEN IN BASE FLOW ##############
                     # Section to Store the IN CHARGE and EXTEND FIRST EXPIRY data to a temporary variable dictionary to use it for double flow process TEMPORARY DICTIONARY = old_step_type_data
                     # Condition for Base Flow to start storing the data
                     if double_extend_key != "double" and double_extend_key != "extend":
@@ -95,7 +95,7 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                         ]
                     ######################################
 
-                    ############ DOUBLE FLOW ##############
+                    ############ LOOP WHEN IN DOUBLE FLOW ##############
                     # Condition for Double Flow to start using the previous IN CHARGE and EXTEND FIRST EXPIRY data by updating it to step_type_data
                     elif double_extend_key == "double":
                         logger.info(
@@ -104,7 +104,7 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
                         step_type_data.update(old_step_type_data)
                     #######################################
 
-                    ############ EXTEND FLOW ##############
+                    ############ LOOP WHEN IN EXTEND FLOW ##############
                     # Condition for Extend Flow to start using the previous EXTEND FIRST EXPIRY WITH ADDITIONAL PARAM data by updating it to step_type_data
                     elif double_extend_key == "extend":
                         logger.info(f"RE-USING EXTEND HLR - PLY {old_step_type_data}")
@@ -140,18 +140,21 @@ def start_step_and_flow_construct(bs_worksheet, bs_success_rows, webdriver, gshe
             )
 
             # Update RPA Remarks when Gyro Success
-            rpa_remarks_gyro = f"{bs_row_data[nf.NF_INDEX_RPA_REMARKS]} | GYRO: SUCCESS"
+            bs_row_data_updated_1 = bs_worksheet.row_values(row)
+            rpa_remarks_gyro = (
+                f"{bs_row_data_updated_1[nf.NF_INDEX_RPA_REMARKS]} | GYRO: SUCCESS"
+            )
             gs.update_row(
                 row, nf.COLUMN_BULK_SERVICE_RPA_REMARKS, bs_worksheet, rpa_remarks_gyro
             )
 
             # Start Defining Current Bulk Service in Simple Service Group DATA BAL
             if bs_row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY].lower() == "yes":
+                bs_row_data_updated_2 = bs_worksheet.row_values(row)
                 ssg.define_bs_simple_service_group(bs_service_id, wd)
 
                 # Update RPA Remarks when Simple Service Group Success
-                bs_row_data = bs_worksheet.row_values(row)
-                rpa_remarks_ssg = f"{bs_row_data[nf.NF_INDEX_RPA_REMARKS]} | SIMPLE SERVICE GROUP: SUCCESS"
+                rpa_remarks_ssg = f"{bs_row_data_updated_2[nf.NF_INDEX_RPA_REMARKS]} | SIMPLE SERVICE GROUP: SUCCESS"
                 gs.update_row(
                     row,
                     nf.COLUMN_BULK_SERVICE_RPA_REMARKS,

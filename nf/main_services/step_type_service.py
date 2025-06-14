@@ -33,8 +33,9 @@ class StepTypeService:
             logger.info("Default Values Done")
         except Exception as e:
             logger.info(
-                f"An error has occurred while fillinng up default values on 'nf_steps_default_input'\nERROR: {e}"
+                f"An error has occurred while entering default values. Function 'nf_steps_default_input'\nERROR: {e}"
             )
+            self.wd.stop_process()
 
     # STEP TYPE 'IN CHARGE' Function to execute process for step type IN CHARGE
     def step_type_in_charge(

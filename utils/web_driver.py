@@ -50,7 +50,7 @@ class WebDriver:
             options.add_argument("--ignore-ssl-errors=yes")
             options.add_argument("--ignore-certificate-errors")
             options.add_argument("--log-level=3")
-            # options.add_argument("--headless")
+            options.add_argument("--headless")
 
             if platform.system() == "Linux":
                 options.add_argument("--headless")
@@ -135,7 +135,7 @@ class WebDriver:
 
     def stop_process(self):
         self.driver.quit()
-        sys.exit("Terminating Chromedriver...")
+        sys.exit("Terminating bot...")
 
     def redirect_to_page(self, url):
         try:
