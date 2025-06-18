@@ -184,7 +184,7 @@ class Logger:
         handler.setFormatter(CustomFormatter(self.log_format))
 
         self.create_file = (
-            False  # Disable storing logs temporary for development and testing purpose
+            True  # Disable storing logs temporary for development and testing purpose
         )
         if self.create_file:
             # create file handler, for file log
@@ -203,7 +203,7 @@ class Logger:
 
 
 # dev logs
-local_logger = Logger(log_id=os.getenv("LOG_ID", "NF"))
+local_logger = Logger("NF-")
 logger = local_logger.logger
 
 

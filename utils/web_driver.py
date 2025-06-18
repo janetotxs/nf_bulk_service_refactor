@@ -1,4 +1,5 @@
 import logging
+from utils.logger2 import logger
 import os
 import platform
 import sys
@@ -11,7 +12,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # Optional: You can set this globally or make it a class attribute
 DEFAULT_WAIT_TIME = 10
@@ -89,13 +90,13 @@ class WebDriver:
             logger.info(
                 f"Timeout waiting for element: ({locator_type}, {element_value}) with condition '{condition}'\nERROR: {e}"
             )
-            self.stop_process()
+            raise
 
         except NoSuchElementException as e:
             logger.info(
                 f"Element not found! Locator: ({locator_type}, {element_value})\nERROR: {e}"
             )
-            self.stop_process()
+            raise
 
         except Exception as e:
             logger.exception(
@@ -123,8 +124,9 @@ class WebDriver:
             elif action == "hover":
                 actions.move_to_element(element).perform()
 
-        except NoSuchElementException as e:
+        except Exception as e:
             logger.error(f"Element not found: {locator}={element}. ERROR: {e}")
+            raise
 
     # Redirect to  Login page
     def redirect_nf_login_page(self, url):
@@ -138,12 +140,30 @@ class WebDriver:
         sys.exit("Terminating bot...")
 
     def redirect_to_page(self, url):
-        try:
-            # Redirect to Add Service Step Page using service id
-            logger.info(f"Redirecting to {url}")
-            self.driver.get(url)
-            self.driver.implicitly_wait(10)
-            logger.info(f"Site reached! {url}")
+        logger.info(f"Redirecting to Page {url}")
+        max_retries = 5
+        # self.driver.set_page_load_timeout(30)  # Set timeout (seconds)
 
-        except Exception as e:
-            logger.info(f"Unable to reach site {url}\nERROR: {e}")
+        for attempt in range(1, max_retries + 1):
+            logger.info(f"Attempt {attempt} to load the page...")
+
+            try:
+                self.driver.get(url)
+                self.wait_until_element("xpath", "//input[@type='submit']", "clickable")
+                logger.info("Site reached!")
+                break
+
+            except TimeoutException as e:
+                logger.warning(
+                    f"Attempt {attempt} timed out. Refreshing and retrying..."
+                )
+                self.driver.execute_script("window.stop();")  # stop page load if needed
+                self.driver.refresh()
+                if attempt == max_retries:
+                    logger.error("Max retries reached. Page did not load.")
+                    raise Exception(f"Page timeout\nERROR: {e}")
+
+            except Exception as e:
+                logger.error(f"Unexpected error on attempt {attempt}: {e}")
+                if attempt == max_retries:
+                    raise

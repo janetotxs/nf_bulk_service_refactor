@@ -1,8 +1,7 @@
-from selenium.webdriver.common.by import By
 from utils.env_loader import get_env_variable
 from utils.logger2 import logger
-from nf.main_services import bulk_service as bs
 from nf.nf_constants import NfConstants
+from selenium.common.exceptions import TimeoutException
 
 # Call Constants
 nf = NfConstants()
@@ -29,6 +28,7 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
         logger.info("STARTING EXTEND KEYWORD PROCESS")
         # Declare Keyword value and Operation
         # list_keywords = []
+        url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
         provision_keyword_value = bs_row_data[nf.BS_INDEX_PROVISION_KEYWORD]
         deprovision_keyword_value = bs_row_data[nf.BS_INDEX_DEPROVISION_KEYWORD]
         status_keyword_value = bs_row_data[nf.BS_INDEX_STATUS_KEYWORD]
@@ -52,6 +52,7 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
         # Start Loop for each keyword that is set to True
         for keyword_key, keyword_true in keyword_conditions.items():
             if keyword_true:
+
                 logger.info(f"Current Loop: {keyword_key}")
                 # Get keyword value and operiations by calling function get_keyword_operation
                 keyword_value, selected_keyword_operation = get_keyword_operation(
@@ -67,27 +68,34 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
                 )
 
                 # Redirect to Keyword Add Page using bulk service id
-                wd.driver.get(
-                    f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
-                )
+                wd.redirect_to_page(url)
                 wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
-                logger.info("Site Reached!")
 
                 # Section to fill up the fields
                 # Dropdown Operation Field
+                logger.info("Filling up keyword fields...")
                 wd.perform_action("xpath", selected_keyword_operation, "click")
 
                 # Input Regex Field
                 wd.perform_action(
                     "name", nf.KEYWORD_REGEX_INPUT, "sendkeys", keyword_value
                 )
+                try:
+                    # Click Add Button
+                    wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                    wd.wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
 
-                # Click Add Button
-                wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                except (TimeoutError, TimeoutException):
+                    logger.info("Page time out, stopping page from loading...")
+                    wd.driver.execute_script("window.stop();")
 
                 logger.info(
                     f"Service Keyword Successfully Created for {keyword_key.upper()}"
                 )
+
+    except (TimeoutError, TimeoutException):
+        logger.info("Page time out!, stopping page from loading...")
+        wd.driver.execute_script("window.stop();")
 
     except Exception as e:
         logger.info(f"An error has occurred while creating keyword\nERROR:{e}")
@@ -109,16 +117,16 @@ def get_keyword_operation(
     # For Declaring Status Keyword and Operation
     elif keyword_key == "status":
         keyword_value = status_keyword_value
-        selected_keyword_operation = "foo"  # Mamsh declare mo na lng sa nf_constants yung xpath neto at dapat naka xpath, pde mo nlng gayahin ung ginawa ko na EXTEND
+        selected_keyword_operation = nf.KEYWORD_OPERATION_STATUS
 
     # For Declaring Deprovision Keyword Declaration
     elif keyword_key == "deprovision":
         keyword_value = deprovision_keyword_value
-        selected_keyword_operation = "foo"  # Mamsh declare mo na lng sa nf_constants yung xpath neto at dapat naka xpath, pde mo nlng gayahin ung ginawa ko na EXTEND
+        selected_keyword_operation = nf.KEYWORD_OPERATION_DEPROVISION
 
     # For Declaring Provision Keyword Declaration
     elif keyword_key == "provision":
         keyword_value = provision_keyword_value
-        selected_keyword_operation = "foo"  # Mamsh declare mo na lng sa nf_constants yung xpath neto at dapat naka xpath, pde mo nlng gayahin ung ginawa ko na EXTEND
+        selected_keyword_operation = nf.KEYWORD_OPERATION_PROVISION
 
     return keyword_value, selected_keyword_operation

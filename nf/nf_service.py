@@ -8,6 +8,7 @@ from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 import datetime
 import time
+from nf.main_services import message_service as ms
 
 # Call Constants
 nf = NfConstants()
@@ -85,7 +86,7 @@ def process_sequence(wd, gs):
     sf.start_step_and_flow_construct(bulk_service_worksheet, bs_success_rows, wd, gs)
 
     # Start Defining Messages and Reminder Messages
-    "TODO"
+    ms.create_message(wd, gs)
 
 
 # Clean Up Sequence Function

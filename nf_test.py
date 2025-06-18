@@ -145,6 +145,7 @@ for keyword_key, keyword_true in keyword_conditions.items():
         driver.get(
             f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
         )
+
         add_btn_element = WebDriverWait(driver, 10).until(
             EC.visibility_of_element_located((By.XPATH, nf.NF_ADD_BTN_INPUT))
         )

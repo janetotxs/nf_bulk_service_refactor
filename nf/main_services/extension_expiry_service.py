@@ -1,8 +1,7 @@
-from selenium.webdriver.common.by import By
 from utils.env_loader import get_env_variable
 from utils.logger2 import logger
-from nf.main_services import bulk_service as bs
 from nf.nf_constants import NfConstants
+from selenium.common.exceptions import TimeoutException
 
 # Call Constants
 nf = NfConstants()
@@ -30,6 +29,7 @@ def create_extension_expiry(bs_service_id, bs_row_data, wd):
         )
         wd.wait_until_element("name", nf.SERVICE_PARAM_INPUT, "visible")
 
+        logger.info("Filling up extension expiry fields...")
         # Clear Param Input
         wd.perform_action("name", nf.SERVICE_PARAM_INPUT, "clear")
 
@@ -48,9 +48,14 @@ def create_extension_expiry(bs_service_id, bs_row_data, wd):
             "sendkeys",
             int(bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24,
         )
+        try:
+            # Click Add Button
+            logger.info("Creating Extension Service Expiry...")
+            wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-        # Click Add Button
-        wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+        except TimeoutException:
+            logger.info("Page time out, stopping page from loading...")
+            wd.driver.refresh()
 
         logger.info("Service Extension Expiry Successfully Created!")
 

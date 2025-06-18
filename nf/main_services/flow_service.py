@@ -60,7 +60,6 @@ def nf_start_service_flows(
     except Exception as e:
         error_msg = f"Something went wrong in the Process Sequence of 'SERVICE FLOW PROCESS'.\nERROR: {e}"
         logger.info(error_msg)
-        logger.info("Terminating Bot")
         wd.stop_process()
         # --------------------END FLOWS PROCESS------------------------#
 

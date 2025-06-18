@@ -21,12 +21,21 @@ gc = gspread.service_account(filename="secret_key.json")
 
 sh = gc.open_by_key(os.getenv("GSHEET_ID"))
 
-worksheet = sh.worksheet("BulkService-V2")
+worksheet = sh.worksheet("Messages")
 
-records = worksheet.row_values(2)
 
-value = records[nf.BS_INDEX_PROVISION_KEYWORD]
-if value:
-    print("EXIST!")
+# Function to Update a specific row via row and column coordinates
+def update_row(row, column, worksheet, value):
+    try:
+        print(f"{worksheet}: Updating Cell...")
+        # Update cell using 'value'
+        worksheet.update_cell(row, column, value)
 
-print(value)
+    except Exception as e:
+        print(f"Unexpected error has occurred while updating cell. ERROR: {e}")
+
+
+rows = [2, 3]
+
+for row in rows:
+    update_row(row, 13, worksheet, 1192)

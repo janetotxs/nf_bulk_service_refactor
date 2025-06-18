@@ -1,5 +1,6 @@
 from nf.nf_service import process_sequence_nf
-from smp.smp_service import process_sequence_smp
+
+# from smp.smp_service import process_sequence_smp
 
 
 def main():

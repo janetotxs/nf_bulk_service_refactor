@@ -54,18 +54,12 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
             logger.info(
                 f"STARTING ADD BULK SERVICES PROCESS FOR: {row_data[nf.NF_INDEX_NAME]}"
             )
-            try:
-                # Redirect to ADD BULK SERVICE PAGE
-                url_bs_add_page = get_env_variable("WEBTOOL_BULK_SERVICES_ADD_FULL_URL")
-                wd.driver.get(url_bs_add_page)
-                logger.info("Redirecting to Bulk Service Add Page..s")
-                wd.wait_until_element("xpath", nf.NF_INPUT_NAME, "visible")
-            except Exception as e:
-                logger.info(f"Unable to reach {url_bs_add_page}\nERROR: {e}")
 
-            logger.info(
-                "Bulk Service Add Page Successfully Reached!, filling up Bulk Services Fields..."
-            )
+            # Redirect to Add Bulk Service Page
+            url_bs_add_page = get_env_variable("WEBTOOL_BULK_SERVICES_ADD_FULL_URL")
+            wd.redirect_to_page(url_bs_add_page)
+
+            logger.info("Filling up bulk service fields...")
             try:
                 # Input Bulk Service Name Field
                 wd.perform_action(
@@ -172,9 +166,11 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
                 # handle_bs_community_pool(row_data[13])
 
                 # Click Add button
+                logger.info("Fetching service id from success message..")
                 wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
                 # Get Bulk Services Service Id from Success Message Text
+                logger.info("Success message loading....")
                 wd.wait_until_element("xpath", "//div[@class='success']", "visible")
                 success_msg = wd.driver.find_element(
                     By.XPATH, "//div[@class='success']"
@@ -183,7 +179,7 @@ def nf_start_bulk_services(bs_worksheet, webdriver, gsheet):
                 service_id = word_service_id.replace(".", "")
 
                 logger.info(
-                    f"BULK SERVICES PROCESS DONE! SERVICE ID CREATED: {service_id}"
+                    f"Bulk Service Successfully Created! Service Id: {service_id}"
                 )
 
             except Exception as e:
@@ -574,8 +570,12 @@ def nf_assign_bulk_service_flow(double_extend_value, bs_service_id, flow_id):
                 "click",
             )
 
-        # Click Update button
-        wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+        # Handle after editing form. Stop loading the page if its taking time to load and doesn't need to get the element success message...
+        try:
+            # Click Update button
+            wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+        except (TimeoutError, Exception):
+            wd.driver.execute_script("window.stop();")
 
     except Exception as e:
         logger.info(

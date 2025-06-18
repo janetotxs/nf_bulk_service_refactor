@@ -2,8 +2,7 @@ class NfConstants:
     GSHEET = "Temp_NF_Bot_Template"
     GSHEET_ID = "14kmKYQh9FG0GHJVMxbdlxoa10Juw0aXCMjp0L1KnNK8"
     WORKSHEET_TAB_CREDENTIAL = "Creds"
-    WORKSHEET_TAB_BULK_SERVICES = "BulkService"
-    WORKSHEET_TAB_BULK_SERVICES_V2 = "BulkService-V2"
+    WORKSHEET_TAB_BULK_SERVICES_V2 = "BulkService"
     WORKSHEET_TAB_BULK_SERVICES_TAB_STEPS = "Steps"
     WORKSHEET_TAB_BULK_SERVICES_TAB_FLOWS = "Flows"
     WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX = "ParamMatrix"
@@ -172,6 +171,7 @@ class NfConstants:
     )
     NF_STEPS_FINAL_CHECKBOX = "final"
     NF_STEPS_RETRY_INPUT = "retry"
+    NF_SUCCESS_MESSAGE = "//div[@id='content']//div[contains(text(), 'Success')]"
     STEP_SUCCESS_MESSAGE = "(//div[@id='content']//div)[1]"
 
     # STEP TYPE - IN PROV SERVICE
@@ -186,6 +186,9 @@ class NfConstants:
     NF_KEYWORDS_REPLY = "//input[@name='reply']"
     NF_KEYWORDS_REPLY_DISABLED = "//input[@name='reply' and @disabled]"
     KEYWORD_OPERATION = "//select[@name='op_id']"
+    KEYWORD_OPERATION_PROVISION = "//select[@name='op_id']//option[@value='1']"
+    KEYWORD_OPERATION_DEPROVISION = "//select[@name='op_id']//option[@value='2']"
+    KEYWORD_OPERATION_STATUS = "//select[@name='op_id']//option[@value='3']"
     KEYWORD_OPERATION_EXTEND = "//select[@name='op_id']//option[@value='39']"
 
     # PARAM MATRIX INDEX
@@ -221,6 +224,21 @@ class NfConstants:
 
     # MESSAGES COLUMN COUNTS
     COLUMN_MESSAGES_SERVICE_ID = 13
+
+    # MESSAGE INDEX
+    NF_MSG_INDEX_REMARKS = 13
+    NF_MSG_INDEX_SERVICE_ID = 12
+    NF_MSG_INDEX_MESSAGE_TYPE = 0
+    NF_MSG_INDEX_BRAND = 1
+    NF_MSG_INDEX_CHANNEL = 2
+    NF_MSG_INDEX_CATEGORY = 4
+    NF_MSG_INDEX_TYPE = 5
+    NF_MSG_INDEX_DESCRIPTION = 6
+    NF_MSG_INDEX_SUBJECT = 7
+    NF_MSG_INDEX_PUSH_NOTIF_CHANNEL = 8
+    NF_MSG_INDEX_MESSAGE = 3
+    NF_MSG_INDEX_SCHEDULE_REMINDER_HOURS = 9
+    NF_MSG_INDEX_SCHEDULE_REMINDER_SETTING = 10
 
 
 class SMPConstants:

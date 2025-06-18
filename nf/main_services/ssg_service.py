@@ -2,6 +2,8 @@ from utils.logger import setup_logger
 from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 from utils.env_loader import get_env_variable
+from selenium.common.exceptions import TimeoutException
+
 
 # logger = setup_logger(service_name=f"NF {__name__}")
 
@@ -31,11 +33,15 @@ def define_bs_simple_service_group(bs_service_id, wd):
         # Input Priority Field = Default Value 1
         wd.perform_action("name", nf.SSG_PRIORITY_INPUT, "sendkeys", 1)
 
-        # Click Add Button
-        wd.perform_action("xpath", nf.SSG_ADD_BTN_SIMPLE_SERVICES, "click")
-        logger.info(
-            f"Bulk Service {bs_service_id} Successfully Defined in Simple Service Group [DATA_BAL] With Priority 1"
-        )
+        try:
+            # Click Add Button
+            wd.perform_action("xpath", nf.SSG_ADD_BTN_SIMPLE_SERVICES, "click")
+            logger.info(
+                f"Bulk Service {bs_service_id} Successfully Defined in Simple Service Group [DATA_BAL] With Priority 1"
+            )
+        except TimeoutException:
+            logger.info("Page time out, refreshing current page...")
+            wd.driver.refresh()
 
     except Exception as e:
         logger.info(
