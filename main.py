@@ -1,13 +1,14 @@
-from nf.nf_service import process_sequence_nf
+from nf.nf_service import NFService
 
 # from smp.smp_service import process_sequence_smp
 
 
 def main():
 
+    nf = NFService()
     # NF
-    # Start Process Bot Sequence
-    process_sequence_nf()
+    # Start NF Service
+    nf.run_sequence()
 
     # SMP
     # process_sequence_smp()

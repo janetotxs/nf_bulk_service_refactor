@@ -1,7 +1,15 @@
-old_step_type_data = {"hlr_ply_id": "test"}
-data = ""
+def inner():
+    try:
+        test["test"] = 32
+    except:
+        raise Exception("inner error!")
 
-if not data:
-    print("PASS")
-else:
-    print("NONE")
+
+def outer():
+    try:
+        inner()
+    except Exception as e:
+        print(e)
+
+
+outer()

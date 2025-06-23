@@ -7,12 +7,16 @@ from selenium.common.exceptions import TimeoutException
 nf = NfConstants()
 
 
-# Function to define the Service Expiry of Bulk Services
-def create_service_expiry(bs_row_data, service_id, wd, gs):
-    try:
+class ExpiryService:
+    def __init__(self, webdriver, gsheet):
+        self.wd = webdriver
+        self.gs = gsheet
+
+    # Function to define the Service Expiry of Bulk Services
+    def create_service_expiry(self, bs_row_data, service_id):
         logger.info("STARTING EXPIRY SERVICE PROCESS")
         # Declare ParamMatrix Worksheet
-        param_worksheet = gs.create_worksheet(
+        param_worksheet = self.gs.create_worksheet(
             nf.WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX
         )
 
@@ -21,44 +25,33 @@ def create_service_expiry(bs_row_data, service_id, wd, gs):
             nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS
         ].lower()
         logger.info("Redirecting to Add Service Expiry Page")
-        wd.driver.get(
+        self.wd.driver.get(
             f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_expiries&op=add&details_id={service_id}"
         )
-        wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+        self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
         # Section to Input Default Values
         # If Default Duration in Days value is No Expiry, choose radio button no expiry, else, multiple by 24
         logger.info("Site Reached!")
         if "no" in default_duration_in_days_value:
-            wd.perform_action("id", "et_2", "click")
+            self.wd.perform_action("id", "et_2", "click")
         else:
             # Input Expiry Field
-            wd.perform_action(
+            self.wd.perform_action(
                 "id",
                 "expiry",
                 "sendkeys",
                 int(default_duration_in_days_value) * 24,
             )
-        try:
+
             logger.info("Creating Service Expiry with Default Values...")
-            wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-            # Try waiting for the next expected element or condition
-            wd.wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
-
-        except TimeoutException:
-            logger.warning(
-                "TimeoutException occurred after clicking Add. Refreshing page..."
-            )
-            wd.driver.refresh()
-
-        except Exception as e:
-            logger.error(f"Unexpected error occurred: {e}")
-            wd.driver.refresh()
+            # Click Add Button
+            self._click_add_and_wait()
 
         logger.info("Service Expiry Successfully Created With Default Values")
 
         # Section to Input Param Matrix Values
-        param_matrix_rows = gs.get_rows_by_name(
+        param_matrix_rows = self.gs.get_rows_by_name(
             param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
         )
 
@@ -69,10 +62,10 @@ def create_service_expiry(bs_row_data, service_id, wd, gs):
                     "Found Param inputs for Service Expiry, filling up Param fields..."
                 )
                 # Clear Input Param Field
-                wd.perform_action("name", nf.SERVICE_PARAM_INPUT, "clear")
+                self.wd.perform_action("name", nf.SERVICE_PARAM_INPUT, "clear")
 
                 # Input Param Field
-                wd.perform_action(
+                self.wd.perform_action(
                     "name",
                     nf.SERVICE_PARAM_INPUT,
                     "sendkeys",
@@ -80,37 +73,35 @@ def create_service_expiry(bs_row_data, service_id, wd, gs):
                 )
 
                 # Input Expiry
-                wd.perform_action(
+                self.wd.perform_action(
                     "id",
                     "expiry",
                     "sendkeys",
                     int(param_matrix_data[nf.INDEX_PARAM_MATRIX_DURATION]) * 24,
                 )
                 # Handle after submitting form.. If taking time to load and doesn't need to get the element success message...
-                try:
-                    logger.info("Creating Service Expiry with Param Values...")
-                    wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-                    wd.wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
-
-                except TimeoutException:
-                    logger.warning(
-                        "TimeoutException occurred after clicking Add (Param Matrix). Refreshing page."
-                    )
-                    wd.driver.refresh()
-
-                except Exception as e:
-                    logger.error(
-                        f"Unexpected error occurred during Param Matrix add: {e}"
-                    )
-                    wd.driver.refresh()
+                logger.info("Creating Service Expiry with Param Values...")
+                self._click_add_and_wait()
 
                 logger.info("Service Expiry Successfully Created With Param Values")
 
         else:
             logger.info("No Param Matrix Found for this Service name.")
 
-    except Exception as e:
-        logger.info(
-            f"An error has occurred on function 'nf_add_service_expiry'\nERROR: {e}"
-        )
-        wd.stop_process()
+    def _click_add_and_wait(self, wd):
+        try:
+            logger.info("Clicking Add button...")
+            self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            self.wd.wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
+            logger.info("Service Expiry successfully created.")
+        except TimeoutException:
+            logger.warning(
+                "TimeoutException occurred after clicking Add. Refreshing page..."
+            )
+            self.wd.driver.refresh()
+            raise
+
+        except Exception as e:
+            logger.error(f"Unexpected error occurred: {e}")
+            self.wd.driver.refresh()
+            raise

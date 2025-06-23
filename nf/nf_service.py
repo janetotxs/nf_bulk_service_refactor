@@ -8,6 +8,7 @@ from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 import datetime
 import time
+from nf.main_services.bulk_services import BulkServices
 from nf.main_services import message_service as ms
 
 # Call Constants
@@ -21,22 +22,10 @@ start_time = time.time()
 
 class NFService:
     def __init__(self):
-        self.nf = NfConstants()
         self.wd = WebDriver()
         self.gs = GSheetClient()
-
-    # Function to start the process for NF
-    def process_sequence_nf(self):
-        # Calls web driver and gsheet
-
-        # NF Login Sequence
-        self.login_sequence(self.wd, self.gs)
-
-        # NF Process Sequence
-        self.process_sequence(self.wd, self.gs)
-
-        # NF Clean up Sequence
-        self.cleanup_sequence(self.wd)
+        self.bs_worksheet = self.gs.create_worksheet(nf.WORKSHEET_TAB_BULK_SERVICES_V2)
+        self.bs = BulkServices(self.bs_worksheet, self.wd, self.gs)
 
     # Login Sequence Function.
     def login_sequence(self):
@@ -78,19 +67,14 @@ class NFService:
     # Process Sequence Function
     def process_sequence(self):
 
-        # Create Worksheet For Bulk Service
-        bulk_service_worksheet = self.gs.create_worksheet(
-            nf.WORKSHEET_TAB_BULK_SERVICES_V2
-        )
-
         # Start Bulk Services Creation Per Row. After creation done, return all successfully created bulk services ROWS as an array to 'bs_success_rows' array variable
-        bs_success_rows = bs.nf_start_bulk_services(
-            bulk_service_worksheet, self.wd, self.gs
+        bs_success_rows = self.bs.nf_start_bulk_services(
+            self.bs_worksheet, self.wd, self.gs
         )
 
         # Start defining Steps, using rows successfully created from Bulk Services.
         sf.start_step_and_flow_construct(
-            bulk_service_worksheet, bs_success_rows, self.wd, self.gs
+            self.bs_worksheet, bs_success_rows, self.wd, self.gs
         )
 
         # Start Defining Messages and Reminder Messages
@@ -107,3 +91,16 @@ class NFService:
             f"\n--- Bot Duration: {time.time() - start_time:.2f} seconds ---"
         )
         self.wd.stop_process()
+
+    # Function to start the process for NF
+    def run_sequence(self):
+        # Calls web driver and gsheet
+
+        # NF Login Sequence
+        self.login_sequence(self.wd, self.gs)
+
+        # NF Process Sequence
+        self.process_sequence(self.wd, self.gs)
+
+        # NF Clean up Sequence
+        self.cleanup_sequence(self.wd)
