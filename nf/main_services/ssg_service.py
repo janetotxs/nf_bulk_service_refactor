@@ -17,10 +17,15 @@ def define_bs_simple_service_group(bs_service_id, wd):
         logger.info("STARTING SIMPLE SERVICE GROUP PROCESS")
         # Redirect to Simple Service Group Details Page
         logger.info("Redirecting to Simple Service Group Detail Page...")
-        wd.driver.get(
-            f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=simple_service_groups&op=details&id=1"
-        )
+        # wd.driver.get(
+        #     f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=simple_service_groups&op=details&id=1"
+        # )
+
+        url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=simple_service_groups&op=details&id=1"
+        wd.redirect_to_page(url)
+
         wd.wait_until_element("xpath", nf.SSG_ADD_BTN_ACCESS_CODE, "visible")
+
         logger.info("Simple Service Group Detail Page Successfully Reached!")
 
         # Select Current Bulk Service ID

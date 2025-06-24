@@ -27,7 +27,7 @@ class GSheetClient:
             service_account_file, scopes=scopes
         )
         client = gspread.authorize(credentials)
-        self.spreadsheet = client.open_by_key(get_env_variable("GSHEET_ID"))
+        self.spreadsheet = client.open_by_key(get_env_variable("GSHEET_ID_DEV"))
         print("Authorized scopes:", credentials.scopes)
 
     # Get Google Worksheet Data using spreadsheet ID
@@ -54,18 +54,18 @@ class GSheetClient:
             # Check rpa remark column if there's a text that does not contain 'Successful' keyword to determine the pending entries, if true, append row value to an array variable.
             result = []
             for data in current_date_cells:
-                print(data.row)
+                # print(data.row)
                 data_value = worksheet.cell(data.row, column_rpa_remarks).value
                 # print(str(data.row) + " = " + data_value)
                 if data_value:
                     value = data_value.lower()
                 else:
                     value = ""
-                print(data_value)
+                # print(data_value)
                 if not "success" in value or not value:
                     result.append(data.row)
                     logger.info(f"Pending Row Added: {data.row}")
-            print(result)
+            # print(result)
             return result
 
         except Exception as e:

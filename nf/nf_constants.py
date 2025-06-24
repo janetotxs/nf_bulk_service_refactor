@@ -2,7 +2,7 @@ class NfConstants:
     GSHEET = "Temp_NF_Bot_Template"
     GSHEET_ID = "14kmKYQh9FG0GHJVMxbdlxoa10Juw0aXCMjp0L1KnNK8"
     WORKSHEET_TAB_CREDENTIAL = "Creds"
-    WORKSHEET_TAB_BULK_SERVICES_V2 = "BulkService"
+    WORKSHEET_TAB_BULK_SERVICES_V2 = "test"
     WORKSHEET_TAB_BULK_SERVICES_TAB_STEPS = "Steps"
     WORKSHEET_TAB_BULK_SERVICES_TAB_FLOWS = "Flows"
     WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX = "ParamMatrix"
@@ -85,6 +85,7 @@ class NfConstants:
     NF_BS_THREAD_COUNT_INPUT_NAME = "thread_count"
     NF_BS_TYPE_TIME_BASED = "//select[@name='btype']//option[@value='1']"
     NF_BS_TYPE_WALLET_BASED = "//select[@name='btype']//option[@value='2']"
+    SUCCESS_MESSAGE = "//div[@class='success']"
 
     # brands-v1
     NF_BS_BRAND_GHP = "brand1"
@@ -204,7 +205,7 @@ class NfConstants:
     # PARAM MATRIX COLUMN
     COLUMN_PARAM_MATRIX_SERVICE_NAME = 6
     COLUMN_PARAM_MATRIX_SERVICE_ID = 7
-    COLUMN_PARAM_MATRIX_RPA_REMARKS = 8
+    COLUMN_PARAM_MATRIX_RPA_REMARKS = 12
 
     # STEP TYPE EDIT PAGE
     EDIT_STEP_INPUT_FIELD_PARAM = "//input[@name='par']"

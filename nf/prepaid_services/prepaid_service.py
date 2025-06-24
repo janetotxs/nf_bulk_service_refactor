@@ -10,7 +10,7 @@ nf = NfConstants()
 
 
 # Function to start Step and Flow Construct Process for Prepaid CTL
-def start_construct_prepaid_ctl(
+def start_construct_prepaid(
     double_extend_value,
     old_extend_step_id,
     bs_service_id,
@@ -20,8 +20,6 @@ def start_construct_prepaid_ctl(
     gsheet,
 ):
     try:
-        # Instantiate StepType Class
-        st = StepTypeService(webdriver, gsheet)
 
         # Declare empty dictionary
         dict_step_type_data = {}
@@ -30,18 +28,30 @@ def start_construct_prepaid_ctl(
             nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
         ].lower()
 
-        # Redirect to Add Step Page
         url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
-        webdriver.redirect_to_page(url_step_page)
+
+        # Instantiate StepType Class
+        st = StepTypeService(webdriver, gsheet, url_step_page)
 
         # =======================IN CHARGE and EXTEND FIRST EXPIRY FLOW SECTION=============================#
         # Execute Step Type Process = IN CHARGE
-        if double_extend_value != "double":
+        if (
+            "prepaid ctl" in step_flow_construct_value
+            and double_extend_value != "double"
+            or "prepaid opm" in step_flow_construct_value
+            and double_extend_value == "extend"
+        ):
             logger.info("Processing IN CHARGE")
             in_charge_data = st.step_type_in_charge(
                 double_extend_value, bs_service_id, bs_row_data, param_worksheet
             )
+            if double_extend_value != "extend":
+                dict_incharge_extend_data.update(in_charge_data)
+        else:
+            logger.info("Skipping IN CHARGE - No Creation Needed")
+            in_charge_data = {}
 
+        if double_extend_value != "double":
             # Execute Step Type Process = EXTEND FIRST EXPIRY
             logger.info("Processing EXTEND FIRST EXPIRY")
             extend_first_expiry_data = st.step_type_extend_first_expiry(
@@ -51,15 +61,10 @@ def start_construct_prepaid_ctl(
                 bs_row_data,
                 param_worksheet,
             )
-            if double_extend_value != "extend":
-                dict_incharge_extend_data.update(in_charge_data)
             dict_incharge_extend_data.update(extend_first_expiry_data)
 
         else:
-            logger.info(
-                "Skipping IN CHARGE and EXTEND FIRST EXPIRY - No Creation Needed"
-            )
-            in_charge_data = {}
+            logger.info("Skipping EXTEND FIRST EXPIRY - No Creation Needed")
             extend_first_expiry_data = {}
 
         # =====================Data - DATA PROV WITH KEYWORD MAPPING, DATA PROV EXTENSION WITH KEYWORD MAPPING================#
@@ -146,6 +151,7 @@ def start_construct_prepaid_ctl(
         logger.info(
             f"Successfully Retreived Step Type Ids and Names: {dict_step_type_data}"
         )
+        logger.info(f"Old Data: {dict_incharge_extend_data}")
 
         return dict_step_type_data, dict_incharge_extend_data
     except Exception as e:

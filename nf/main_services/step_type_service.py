@@ -12,9 +12,10 @@ nf = NfConstants()
 
 
 class StepTypeService:
-    def __init__(self, webdriver, gsheet):
+    def __init__(self, webdriver, gsheet, url):
         self.wd = webdriver
         self.gs = gsheet
+        self.url_step_page = url
 
     # Function to enter default values to inputs
     def nf_steps_default_input(self, name_value, steps_type_element, final_value=None):
@@ -44,6 +45,10 @@ class StepTypeService:
         self, double_extend_value, bs_service_id, bs_row_data, param_worksheet
     ):
         try:
+            # Redirect to Add Step Page
+            self.wd.redirect_to_page(self.url_step_page)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+
             logger.info("Executing Step Type: IN CHARGE")
             in_charge_name = (
                 "EXTEND_CHARGE"
@@ -109,20 +114,25 @@ class StepTypeService:
                         f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
                     )
 
-            try:
-                # Click 'Add' button to submit and wait for the success message element to appear.
-                logger.info("Fetching Success Message....")
-                self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            # try:
+            #     # Click 'Add' button to submit and wait for the success message element to appear.
+            #     logger.info("Fetching Success Message....")
+            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-            except (TimeoutException, TimeoutError):
-                logger.info(
-                    "Page took time to load the success message, refreshing page.."
-                )
-                self.wd.refresh()
+            # except (TimeoutException, TimeoutError):
+            #     logger.info(
+            #         "Page took time to load the success message, refreshing page.."
+            #     )
+            #     self.wd.driver.refresh()
 
-            finally:
-                # Call function to handle getting success message element
-                element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+            # finally:
+            #     # Call function to handle getting success message element
+            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+            # Section to get success message after clicking submit button
+            element_value = self.wd.submit_form_and_wait_for_success(
+                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+            )
 
             logger.info("STEP TYPE 'IN CHARGE' SUCCESSFULLY DEFINED!")
 
@@ -154,6 +164,7 @@ class StepTypeService:
     ):
         try:
             # Section for Extend flow only. No Creation needed, Update existing step and add PARAM
+
             if double_extend_value == "extend":
                 try:
                     extend_data_id_name = self.modify_extend_first_expiry(
@@ -169,6 +180,9 @@ class StepTypeService:
                     )
 
             logger.info("Executing Step Type: EXTEND FIRST EXPIRY")
+            # Redirect to Add Step Page
+            self.wd.redirect_to_page(self.url_step_page)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
             # Call function 'nf_steps_default_input' to fill up default values
             self.nf_steps_default_input(
@@ -242,20 +256,25 @@ class StepTypeService:
             else:
                 logger.info("Additional Param not Found")
 
-            try:
-                # Click 'Add' button to submit and wait for the success message element to appear.
-                logger.info("Fetching Success Message....")
-                self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            # try:
+            #     # Click 'Add' button to submit and wait for the success message element to appear.
+            #     logger.info("Fetching Success Message....")
+            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-            except (TimeoutException, TimeoutError):
-                logger.info(
-                    "Page took time to load the success message, refreshing page.."
-                )
-                self.wd.refresh()
+            # except (TimeoutException, TimeoutError):
+            #     logger.info(
+            #         "Page took time to load the success message, refreshing page.."
+            #     )
+            #     self.wd.driver.refresh()
 
-            finally:
-                # Call function to handle getting success message element
-                element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+            # finally:
+            #     # Call function to handle getting success message element
+            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+            # Section to get success message after clicking submit button
+            element_value = self.wd.submit_form_and_wait_for_success(
+                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+            )
 
             logger.info("STEPS EXTENDS FIRST EXPIRY SUCCESSFULLY CREATED!")
 
@@ -302,6 +321,9 @@ class StepTypeService:
             bs_wallet = f"{double_extend_value.upper()}{'' if double_extend_value == '' else '_'}{bs_row_data[nf.NF_INDEX_WALLET]}"
 
             logger.info(f"Executing Step Type: {step_type_name.upper()}")
+            # Redirect to Add Step Page
+            self.wd.redirect_to_page(self.url_step_page)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
             # Call function 'nf_steps_default_input' to fill up the common fields
             # 95 = DATA PROV WITH KEYWORD MAPPING
@@ -414,20 +436,25 @@ class StepTypeService:
             else:
                 logger.info("Additional Param not Found")
 
-            try:
-                # Click 'Add' button to submit and wait for the success message element to appear.
-                logger.info("Fetching Success Message....")
-                self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            # try:
+            #     # Click 'Add' button to submit and wait for the success message element to appear.
+            #     logger.info("Fetching Success Message....")
+            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-            except (TimeoutException, TimeoutError):
-                logger.info(
-                    "Page took time to load the success message, refreshing page.."
-                )
-                self.wd.refresh()
+            # except (TimeoutException, TimeoutError):
+            #     logger.info(
+            #         "Page took time to load the success message, refreshing page.."
+            #     )
+            #     self.wd.driver.refresh()
 
-            finally:
-                # Call function to handle getting success message element
-                element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+            # finally:
+            #     # Call function to handle getting success message element
+            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+            # Section to get success message after clicking submit button
+            element_value = self.wd.submit_form_and_wait_for_success(
+                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+            )
 
             logger.info(f"STEP '{step_type_name.upper()}' SUCCESSFULLY CREATED!")
 
@@ -450,7 +477,6 @@ class StepTypeService:
             logger.info(
                 f"An error has occurred while processing Step Type {step_type_name.upper()} 'nf_steps_data_prov_with_keyword_mapping'\n ERROR: {e}"
             )
-            self.wd.stop_process()
 
     def step_type_in_add_wallet_fup(
         self, double_extend_value, bs_service_id, bs_row_data
@@ -495,6 +521,10 @@ class StepTypeService:
 
                     logger.info(f"Executing Step Type: {step_type_name.upper()}")
 
+                    # Redirect to Add Step Page
+                    self.wd.redirect_to_page(self.url_step_page)
+                    self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+
                     # Call function 'nf_steps_default_input' to fill up default field values
                     self.nf_steps_default_input(
                         step_name,
@@ -516,22 +546,27 @@ class StepTypeService:
                         amount_field_value,
                     )
 
-                    try:
-                        # Click 'Add' button to submit and wait for the success message element to appear.
-                        logger.info("Fetching Success Message....")
-                        self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                    # try:
+                    #     # Click 'Add' button to submit and wait for the success message element to appear.
+                    #     logger.info("Fetching Success Message....")
+                    #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-                    except (TimeoutException, TimeoutError):
-                        logger.info(
-                            "Page took time to load the success message, refreshing page.."
-                        )
-                        self.wd.refresh()
+                    # except (TimeoutException, TimeoutError):
+                    #     logger.info(
+                    #         "Page took time to load the success message, refreshing page.."
+                    #     )
+                    #     self.wd.driver.refresh()
 
-                    finally:
-                        # Call function to handle getting success message element
-                        element_value = self.get_success_message_text(
-                            nf.STEP_SUCCESS_MESSAGE
-                        )
+                    # finally:
+                    #     # Call function to handle getting success message element
+                    #     element_value = self.get_success_message_text(
+                    #         nf.STEP_SUCCESS_MESSAGE
+                    #     )
+
+                    # Section to get success message after clicking submit button
+                    element_value = self.wd.submit_form_and_wait_for_success(
+                        "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                    )
 
                     logger.info(
                         f"STEP FOR '{step_type_name.upper()}' SUCCESSFULLY CREATED!"
@@ -597,9 +632,9 @@ class StepTypeService:
 
                     logger.info(f"Executing Step Type: {step_type_name.upper()}")
 
-                    # Redirect to Add Service Step Page with service id
-                    url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
-                    self.wd.redirect_to_page(url_step_page)
+                    # Redirect to Add Step Page
+                    self.wd.redirect_to_page(self.url_step_page)
+                    self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
                     logger.info(
                         "Add Step Page Successfully Reached! Filling up Step Fields..."
@@ -625,22 +660,27 @@ class StepTypeService:
                         amount_field_value,
                     )
 
-                    try:
-                        # Click 'Add' button to submit and wait for the success message element to appear.
-                        logger.info("Fetching Success Message....")
-                        self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                    # try:
+                    #     # Click 'Add' button to submit and wait for the success message element to appear.
+                    #     logger.info("Fetching Success Message....")
+                    #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-                    except (TimeoutException, TimeoutError):
-                        logger.info(
-                            "Page took time to load the success message, refreshing page.."
-                        )
-                        self.wd.refresh()
+                    # except (TimeoutException, TimeoutError):
+                    #     logger.info(
+                    #         "Page took time to load the success message, refreshing page.."
+                    #     )
+                    #     self.wd.driver.refresh()
 
-                    finally:
-                        # Call function to handle getting success message element
-                        element_value = self.get_success_message_text(
-                            nf.STEP_SUCCESS_MESSAGE
-                        )
+                    # finally:
+                    #     # Call function to handle getting success message element
+                    #     element_value = self.get_success_message_text(
+                    #         nf.STEP_SUCCESS_MESSAGE
+                    #     )
+
+                    # Section to get success message after clicking submit button
+                    element_value = self.wd.submit_form_and_wait_for_success(
+                        "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                    )
 
                     logger.info(f"STEP FOR '{step_type_name}' SUCCESSFULLY CREATED!")
 
@@ -669,6 +709,10 @@ class StepTypeService:
         try:
             logger.info("Executing Step Type: HLR - PLY")
 
+            # Redirect to Add Step Page
+            self.wd.redirect_to_page(self.url_step_page)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+
             self.nf_steps_default_input(
                 "HLR_PLY",
                 "//option[contains(text(), 'HLR PLY') and @value='40']",
@@ -685,20 +729,25 @@ class StepTypeService:
                 "click",
             )
 
-            try:
-                # Click 'Add' button to submit and wait for the success message element to appear.
-                logger.info("Fetching Success Message....")
-                self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            # try:
+            #     # Click 'Add' button to submit and wait for the success message element to appear.
+            #     logger.info("Fetching Success Message....")
+            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-            except (TimeoutException, TimeoutError):
-                logger.info(
-                    "Page took time to load the success message, refreshing page.."
-                )
-                self.wd.refresh()
+            # except (TimeoutException, TimeoutError):
+            #     logger.info(
+            #         "Page took time to load the success message, refreshing page.."
+            #     )
+            #     self.wd.driver.refresh()
 
-            finally:
-                # Call function to handle getting success message element
-                element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+            # finally:
+            #     # Call function to handle getting success message element
+            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+            # Section to get success message after clicking submit button
+            element_value = self.wd.submit_form_and_wait_for_success(
+                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+            )
 
             logger.info("STEP FOR 'HLR PLY' SUCCESSFULLY CREATED!")
 
@@ -778,8 +827,8 @@ class StepTypeService:
         try:
             logger.info("Executing Step Type: DATA EXTEND WALLET EXPIRY")
             # Redirect to Add Step Page
-            url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
-            self.wd.redirect_to_page(url_step_page)
+            self.wd.redirect_to_page(self.url_step_page)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
             logger.info("Filling up data extend wallet expiry fields...")
 
@@ -808,20 +857,25 @@ class StepTypeService:
                 f"{int(bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}",
             )
 
-            try:
-                # Click 'Add' button to submit and wait for the success message element to appear.
-                logger.info("Fetching Success Message....")
-                self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            # try:
+            #     # Click 'Add' button to submit and wait for the success message element to appear.
+            #     logger.info("Fetching Success Message....")
+            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-            except (TimeoutException, TimeoutError):
-                logger.info(
-                    "Page took time to load the success message, refreshing page.."
-                )
-                self.wd.refresh()
+            # except (TimeoutException, TimeoutError):
+            #     logger.info(
+            #         "Page took time to load the success message, refreshing page.."
+            #     )
+            #     self.wd.driver.refresh()
 
-            finally:
-                # Call function to handle getting success message element
-                element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+            # finally:
+            #     # Call function to handle getting success message element
+            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+            # Section to get success message after clicking submit button
+            element_value = self.wd.submit_form_and_wait_for_success(
+                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+            )
 
             logger.info(f"STEP 'DATA EXTEND WALLET EXPIRY' SUCCESSFULLY CREATED!")
 
@@ -881,6 +935,7 @@ class StepTypeService:
                     # Redirect to Add Step Page
                     url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
                     self.wd.redirect_to_page(url_step_page)
+                    self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
 
                     logger.info("Filling up extend wallet expiry fields...")
 
@@ -905,22 +960,27 @@ class StepTypeService:
                         f"{int(bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}",
                     )
 
-                    try:
-                        # Click 'Add' button to submit and wait for the success message element to appear.
-                        logger.info("Fetching Success Message....")
-                        self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                    # try:
+                    #     # Click 'Add' button to submit and wait for the success message element to appear.
+                    #     logger.info("Fetching Success Message....")
+                    #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
 
-                    except (TimeoutException, TimeoutError):
-                        logger.info(
-                            "Page took time to load the success message, refreshing page.."
-                        )
-                        self.wd.refresh()
+                    # except (TimeoutException, TimeoutError):
+                    #     logger.info(
+                    #         "Page took time to load the success message, refreshing page.."
+                    #     )
+                    #     self.wd.driver.refresh()
 
-                    finally:
-                        # Call function to handle getting success message element
-                        element_value = self.get_success_message_text(
-                            nf.STEP_SUCCESS_MESSAGE
-                        )
+                    # finally:
+                    #     # Call function to handle getting success message element
+                    #     element_value = self.get_success_message_text(
+                    #         nf.STEP_SUCCESS_MESSAGE
+                    #     )
+
+                    # Section to get success message after clicking submit button
+                    element_value = self.wd.submit_form_and_wait_for_success(
+                        "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                    )
 
                     logger.info(
                         f"STEP FOR 'IN EXTEND WALLET EXPIRY' SUCCESSFULLY CREATED!"

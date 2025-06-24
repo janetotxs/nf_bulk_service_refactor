@@ -1,4 +1,4 @@
-from nf.nf_service import process_sequence_nf
+from nf.nf_service import NFService
 
 # from smp.smp_service import process_sequence_smp
 
@@ -6,11 +6,9 @@ from nf.nf_service import process_sequence_nf
 def main():
 
     # NF
-    # Start Process Bot Sequence
-    process_sequence_nf()
-
-    # SMP
-    # process_sequence_smp()
+    # Start NF Service
+    nf = NFService()
+    nf.run_sequence()
 
 
 if __name__ == "__main__":
