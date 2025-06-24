@@ -1,5 +1,11 @@
 # Custom Exceptions
+
+
 class BulkServiceError(Exception):
+    pass
+
+
+class ExpiryServiceError(BulkServiceError):
     pass
 
 
