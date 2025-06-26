@@ -16,11 +16,13 @@ nf = NfConstants()
 
 
 class StepAndFlowConstructService:
-    def __init__(self, worksheet, webdriver, gsheet):
+    def __init__(self, worksheets, webdriver, gsheet):
         self.wd = webdriver
         self.gs = gsheet
-        self.bs_worksheet = worksheet
-        self.flow = FlowService(self.wd, self.gs)
+        self.worksheets = worksheets
+        self.flow = FlowService(worksheets, webdriver, gsheet)
+        self.old_step_type_data = {}
+        self.old_extend_step_id = None
 
     # Function to start Steps service loop using BS successfully created rows/row
     def start_step_and_flow_construct(self, bs_success_rows):
@@ -30,7 +32,7 @@ class StepAndFlowConstructService:
         for row in bs_success_rows:
             try:
                 # Get Current Bulk Service row values
-                bs_data = self.bs_worksheet.row_values(row)
+                bs_data = self.worksheets["bulkService"].row_values(row)
 
                 # Declare Variables
                 bs_service_id = bs_data[nf.NF_INDEX_SERVICE_ID]
@@ -51,15 +53,6 @@ class StepAndFlowConstructService:
                     ),
                 }
 
-                # Create worksheet for ParamMatrix
-                param_worksheet = self.gs.create_worksheet(
-                    nf.WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX
-                )
-
-                # Declare old_step_type_data and old_extend_step_id before loop, to update and maintain old data and to reuse for double and extend flow
-                old_step_type_data = {}
-                old_extend_step_id = None
-
                 # Section to start nested loop for standard, double and/or extend Step Type and Flow.
                 for (
                     double_extend_key,
@@ -69,15 +62,13 @@ class StepAndFlowConstructService:
                         f"CURRENT FLOW: {'BASE' if double_extend_key == '' else double_extend_key.upper()} FLOW"
                     )
                     if double_extend_true:
-                        bs_row_data = self.bs_worksheet.row_values(row)
-                        logger.info(f"Bulk Service Data Row {row}: {bs_row_data}")
+                        bs_row_data = self.worksheets["bulkService"].row_values(row)
+                        # logger.info(f"Bulk Service Data Row {row}: {bs_row_data}")
 
                         # Start Steps and Flow construct proccess and return dictionary step details = STEP ID and STEP NAME in dictionary format
                         step_type_data, old_incharge_extend_data = self.create_step(
                             double_extend_key,
-                            old_extend_step_id,
                             bs_row_data,
-                            param_worksheet,
                             row,
                         )
 
@@ -93,10 +84,10 @@ class StepAndFlowConstructService:
                                 f"STORING DATA TO TEMP. VARIABLE: {old_incharge_extend_data}"
                             )
                             # To use for Double Flow - old_step_type_data
-                            old_step_type_data.update(old_incharge_extend_data)
+                            self.old_step_type_data.update(old_incharge_extend_data)
 
                             # To use for Extend Flow - old_extend_step_id
-                            old_extend_step_id = old_incharge_extend_data[
+                            self.old_extend_step_id = old_incharge_extend_data[
                                 "extend_first_expiry_id"
                             ]
                         ######################################
@@ -105,9 +96,9 @@ class StepAndFlowConstructService:
                         # Condition for Double Flow to start using the previous IN CHARGE and EXTEND FIRST EXPIRY data by updating it to step_type_data
                         elif double_extend_key == "double":
                             logger.info(
-                                f"RE-USING IN CHARGE AND EXTEND FIRST EXPIRY DATA: {old_step_type_data}"
+                                f"RE-USING IN CHARGE AND EXTEND FIRST EXPIRY DATA: {self.old_step_type_data}"
                             )
-                            step_type_data.update(old_step_type_data)
+                            step_type_data.update(self.old_step_type_data)
                         #######################################
 
                         ############ LOOP WHEN IN EXTEND FLOW ##############
@@ -115,16 +106,16 @@ class StepAndFlowConstructService:
 
                         elif (
                             double_extend_key == "extend"
-                            and "hlr_ply_id" in old_step_type_data
+                            and "hlr_ply_id" in self.old_step_type_data
                         ):
                             logger.info(
-                                f"RE-USING EXTEND HLR - PLY {old_step_type_data}"
+                                f"RE-USING EXTEND HLR - PLY {self.old_step_type_data}"
                             )
                             # old_step_type_data.clear()
-                            step_type_data["hlr_ply_id"] = old_step_type_data[
+                            step_type_data["hlr_ply_id"] = self.old_step_type_data[
                                 "hlr_ply_id"
                             ]
-                            step_type_data["hlr_ply_name"] = old_step_type_data[
+                            step_type_data["hlr_ply_name"] = self.old_step_type_data[
                                 "hlr_ply_name"
                             ]
                         #######################################
@@ -156,18 +147,22 @@ class StepAndFlowConstructService:
                     )
 
                     # Update RPA Remarks when Gyro Success
-                    bs_row_data_updated_1 = self.bs_worksheet.row_values(row)
+                    bs_row_data_updated_1 = self.worksheets["bulkService"].row_values(
+                        row
+                    )
                     rpa_remarks_gyro = f"{bs_row_data_updated_1[nf.NF_INDEX_RPA_REMARKS]} | GYRO: Success"
                     self.gs.update_row(
                         row,
                         nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
-                        self.bs_worksheet,
+                        self.worksheets["bulkService"],
                         rpa_remarks_gyro,
                     )
 
                 # Start Defining Current Bulk Service in Simple Service Group DATA BAL
                 if bs_row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY].lower() == "yes":
-                    bs_row_data_updated_2 = self.bs_worksheet.row_values(row)
+                    bs_row_data_updated_2 = self.worksheets["bulkService"].row_values(
+                        row
+                    )
                     ssg.define_bs_simple_service_group(bs_service_id, self.wd)
 
                     # Update RPA Remarks when Simple Service Group Success
@@ -175,7 +170,7 @@ class StepAndFlowConstructService:
                     self.gs.update_row(
                         row,
                         nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
-                        self.bs_worksheet,
+                        self.worksheets["bulkService"],
                         rpa_remarks_ssg,
                     )
                 try:
@@ -206,7 +201,7 @@ class StepAndFlowConstructService:
                                 bs_service_id,
                             )
                             logger.info(
-                                f"Messages Row: {row} Updated With Service Id: {bs_service_id}"
+                                f"Service Messages Row: {row} Inserted With Service Id = {bs_service_id}"
                             )
                     else:
                         logger.info("No 'Messages' row to update..")
@@ -216,17 +211,19 @@ class StepAndFlowConstructService:
 
                 except Exception as e:
                     error_msg = f"An error has occurred while updating 'Messages' sheet tab\n ERROR: {e}"
+                    logger.info(error_msg)
+                    raise
 
             except Exception as e:
                 error_msg = f"An error has occurred on 'start_nf_service_steps' function\n ERROR: {e}"
                 logger.info(error_msg)
-                self.gs.update_rpa_remarks_error(row, error_msg, self.bs_worksheet)
+                self.gs.update_rpa_remarks_error(
+                    row, error_msg, self.worksheets["bulkService"]
+                )
                 continue
 
     # Funcion to handle/to determine what step and flow construct to execute
-    def create_step(
-        self, double_extend_value, old_extend_step_id, bs_row_data, param_worksheet, row
-    ):
+    def create_step(self, double_extend_value, bs_row_data, row):
         # --------------------START STEP PROCESS------------------------#
         try:
             # Declare bs_service_id value from bulk service service id and step_and_flow_construct_value
@@ -236,7 +233,7 @@ class StepAndFlowConstructService:
             ].lower()
 
             logger.info(
-                f"STARTING DEFINING STEPS FOR: {bs_service_id} = {bs_row_data[nf.NF_INDEX_NAME]}"
+                f"STARTING DEFINING STEPS AND FLOW FOR SERVICE ID: {bs_service_id} = {bs_row_data[nf.NF_INDEX_NAME]}"
             )
 
             # Determine what specific process to defining steps and flows for bulk services.
@@ -249,10 +246,10 @@ class StepAndFlowConstructService:
             if "prepaid" in step_and_flow_construct_value:
                 step_type_data, incharge_extend_data = pctl.start_construct_prepaid(
                     double_extend_value,
-                    old_extend_step_id,
+                    self.old_extend_step_id,
                     bs_service_id,
                     bs_row_data,
-                    param_worksheet,
+                    self.worksheets["paramMatrix"],
                     self.wd,
                     self.gs,
                 )
@@ -261,19 +258,8 @@ class StepAndFlowConstructService:
 
             # Calling function to execute step type services for Prepaid OPM
             elif "prepaid opm" in step_and_flow_construct_value:
-                # Use Prepaid CTL temporary for now
-                step_type_data, incharge_extend_data = pctl.start_construct_prepaid(
-                    double_extend_value,
-                    old_extend_step_id,
-                    bs_service_id,
-                    bs_row_data,
-                    param_worksheet,
-                    self.wd,
-                    self.gs,
-                )
+                "TODO"
 
-                return step_type_data, incharge_extend_data
-            else:
                 logger.info(
                     f"Value doesn't recognize '{bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT]}' to process for steps and flows construct."
                 )
@@ -297,7 +283,8 @@ class StepAndFlowConstructService:
 
                 # Redirect to Gyro Command Add page
                 logger.info("Redirecting to Gyro Command Add Page...")
-                wd.redirect_to_page(url)
+                wd.redirect_to_page(url, nf.NF_ADD_BTN_INPUT)
+                wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
                 logger.info(f"Adding Gyro Command: {command_value}")
 
@@ -315,8 +302,9 @@ class StepAndFlowConstructService:
 
                 # Click Add button
                 logger.info("Saving gyro command...")
-                wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-                # .wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
+                wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.SUCCESS_OR_EXIST
+                )
                 logger.info(
                     f"Gyro Command '{command_value}' Successfully Created - For Service ID: {bs_service_id}"
                 )

@@ -18,7 +18,9 @@ class StepTypeService:
         self.url_step_page = url
 
     # Function to enter default values to inputs
-    def nf_steps_default_input(self, name_value, steps_type_element, final_value=None):
+    def nf_steps_default_input(
+        self, name_value, steps_type_element, final_value=None, sms_voice=None
+    ):
         try:
             logger.info("Filling up step type default fields...")
             # Input Name Field
@@ -28,8 +30,9 @@ class StepTypeService:
             self.wd.perform_action("xpath", steps_type_element, "click")
 
             # Checkbox Final Field
-            if final_value:
-                self.wd.perform_action("name", nf.NF_STEPS_FINAL_CHECKBOX, "click")
+            if sms_voice:
+                if "voice" in sms_voice:
+                    self.wd.perform_action("name", nf.NF_STEPS_FINAL_CHECKBOX, "click")
 
             # Input Retry Field
             self.wd.perform_action("name", nf.NF_STEPS_RETRY_INPUT, "sendkeys", 3)
@@ -46,8 +49,8 @@ class StepTypeService:
     ):
         try:
             # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             logger.info("Executing Step Type: IN CHARGE")
             in_charge_name = (
@@ -151,7 +154,6 @@ class StepTypeService:
         except Exception as e:
             error_msg = f"An error has occurred while processing Step Type IN CHARGE 'step_type_in_charge'\n ERROR: {e}"
             logger.info(error_msg)
-            self.wd.stop_process()
 
     # STEP TYPE 'EXTENDS FIRST EXPIRY' Function to execute process for step type EXTENDS FIRST EXPIRY
     def step_type_extend_first_expiry(
@@ -181,8 +183,8 @@ class StepTypeService:
 
             logger.info("Executing Step Type: EXTEND FIRST EXPIRY")
             # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             # Call function 'nf_steps_default_input' to fill up default values
             self.nf_steps_default_input(
@@ -322,8 +324,8 @@ class StepTypeService:
 
             logger.info(f"Executing Step Type: {step_type_name.upper()}")
             # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             # Call function 'nf_steps_default_input' to fill up the common fields
             # 95 = DATA PROV WITH KEYWORD MAPPING
@@ -334,9 +336,16 @@ class StepTypeService:
             )
             # Section to Input Default Values from BS Worksheet
             # Input Default Jnetx Wallet Type Dropdown
+            # self.wd.perform_action(
+            #     "xpath",
+            #     f"//option[contains(text(), '{bs_row_data[nf.NF_INDEX_WALLET]}')]",
+            #     "click",
+            # )
+
+            # Input Default Jnetx Wallet Type Dropdown
             self.wd.perform_action(
                 "xpath",
-                f"//option[contains(text(), '{bs_row_data[nf.NF_INDEX_WALLET]}')]",
+                f"//select[@name='jnetx_wallet_type_id']//option[contains(text(), '{bs_row_data[nf.NF_INDEX_WALLET]}')][1]",
                 "click",
             )
 
@@ -522,13 +531,16 @@ class StepTypeService:
                     logger.info(f"Executing Step Type: {step_type_name.upper()}")
 
                     # Redirect to Add Step Page
-                    self.wd.redirect_to_page(self.url_step_page)
-                    self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+                    self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                    # self.wd.wait_until_element(
+                    #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
+                    # )
 
                     # Call function 'nf_steps_default_input' to fill up default field values
                     self.nf_steps_default_input(
                         step_name,
                         f"//select[@id='dd_stype_id']//option[@value='129']",
+                        sms_voice=sms_voice_key,
                     )
 
                     # Input IN Serivce Field
@@ -633,8 +645,10 @@ class StepTypeService:
                     logger.info(f"Executing Step Type: {step_type_name.upper()}")
 
                     # Redirect to Add Step Page
-                    self.wd.redirect_to_page(self.url_step_page)
-                    self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+                    self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                    # self.wd.wait_until_element(
+                    #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
+                    # )
 
                     logger.info(
                         "Add Step Page Successfully Reached! Filling up Step Fields..."
@@ -644,6 +658,7 @@ class StepTypeService:
                     self.nf_steps_default_input(
                         step_name,
                         f"//select[@id='dd_stype_id']//option[@value='5']",
+                        sms_voice=sms_voice_key,
                     )
 
                     # Input IN Serivce Field
@@ -710,8 +725,8 @@ class StepTypeService:
             logger.info("Executing Step Type: HLR - PLY")
 
             # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             self.nf_steps_default_input(
                 "HLR_PLY",
@@ -827,8 +842,8 @@ class StepTypeService:
         try:
             logger.info("Executing Step Type: DATA EXTEND WALLET EXPIRY")
             # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             logger.info("Filling up data extend wallet expiry fields...")
 
@@ -934,8 +949,10 @@ class StepTypeService:
 
                     # Redirect to Add Step Page
                     url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
-                    self.wd.redirect_to_page(url_step_page)
-                    self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+                    self.wd.redirect_to_page(url_step_page, nf.NF_ADD_BTN_INPUT)
+                    # self.wd.wait_until_element(
+                    #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
+                    # )
 
                     logger.info("Filling up extend wallet expiry fields...")
 
@@ -943,6 +960,7 @@ class StepTypeService:
                     self.nf_steps_default_input(
                         step_name,
                         nf.STEP_TYPE_IN_EXTEND_WALLET_EXPIRY,
+                        sms_voice=sms_voice_key,
                     )
 
                     # Input IN Serivce Field
@@ -1008,42 +1026,3 @@ class StepTypeService:
         except Exception as e:
             error_msg = f"An error has occurred while processing Step Type IN EXTEND WALLET EXPIRY - step_type_in_extend_wallet_expiry'\n ERROR: {e}"
             logger.info(error_msg)
-            self.wd.stop_process()
-
-    def get_success_message_text(self, success_message):
-        # Define retry parameters
-        max_retries = 5
-        retry_wait_time = 3  # Wait time between retries (in seconds)
-        # Try getting the success message up to 'max_retries' times
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f"Attempt to fetch success msg: {attempt}")
-                # Wait until the success message element becomes visible
-                self.wd.wait_until_element(
-                    "xpath", success_message, "visible"
-                )  # Increased timeout to 15 seconds
-
-                # Once it's visible, get the text
-                element_value = self.wd.driver.find_element(
-                    By.XPATH, success_message
-                ).text
-
-                # If we get the success message, log and break from the loop
-                logger.info(f"Success message: {element_value}")
-                return element_value  # Exit the loop after success
-
-            except TimeoutException:
-                # Handle timeout, refresh and retry
-                print(f"Attempt {attempt} timed out. Retrying...")
-                logger.warning(f"Attempt {attempt} timed out. Waiting for retry...")
-
-                if attempt == max_retries:
-                    # After max retries, log failure and raise an exception if necessary
-                    logger.error("Max retries reached. Failed to find success message.")
-                    raise TimeoutError(
-                        "Failed to find success message after multiple attempts."
-                    )
-                else:
-                    # Optionally, refresh the page before retrying
-                    self.wd.driver.refresh()
-                    # time.sleep(retry_wait_time)  # Wait before retrying

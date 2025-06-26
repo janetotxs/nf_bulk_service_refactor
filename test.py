@@ -1,7 +1,13 @@
-old_step_type_data = {"hlr_ply_id": "test"}
-data = ""
+import datetime
 
-if not data:
-    print("PASS")
-else:
-    print("NONE")
+
+def test(names):
+    lists = {}
+    for name in names:
+        lists[name] = "test"
+
+    return lists
+
+
+pot = ["bulkService", "paramMatrix"]
+print(datetime.timedelta(seconds=323))

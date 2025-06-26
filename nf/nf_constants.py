@@ -2,7 +2,7 @@ class NfConstants:
     GSHEET = "Temp_NF_Bot_Template"
     GSHEET_ID = "14kmKYQh9FG0GHJVMxbdlxoa10Juw0aXCMjp0L1KnNK8"
     WORKSHEET_TAB_CREDENTIAL = "Creds"
-    WORKSHEET_TAB_BULK_SERVICES_V2 = "test"
+    WORKSHEET_TAB_BULK_SERVICES = "BulkService"
     WORKSHEET_TAB_BULK_SERVICES_TAB_STEPS = "Steps"
     WORKSHEET_TAB_BULK_SERVICES_TAB_FLOWS = "Flows"
     WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX = "ParamMatrix"
@@ -85,7 +85,6 @@ class NfConstants:
     NF_BS_THREAD_COUNT_INPUT_NAME = "thread_count"
     NF_BS_TYPE_TIME_BASED = "//select[@name='btype']//option[@value='1']"
     NF_BS_TYPE_WALLET_BASED = "//select[@name='btype']//option[@value='2']"
-    SUCCESS_MESSAGE = "//div[@class='success']"
 
     # brands-v1
     NF_BS_BRAND_GHP = "brand1"
@@ -172,7 +171,15 @@ class NfConstants:
     )
     NF_STEPS_FINAL_CHECKBOX = "final"
     NF_STEPS_RETRY_INPUT = "retry"
-    NF_SUCCESS_MESSAGE = "//div[@id='content']//div[contains(text(), 'Success')]"
+
+    # SUCCESS MESSAGE ELEMENTS
+    # COMMON
+    SUCCESS_MESSAGE = "//div[@class='success']"
+    # FOR KEYWORD AND SERVICE EXPIRY
+    CONTAINS_SUCCESS_MESSAGE = "//div[@id='content']//div[contains(text(), 'Success')]"
+    # FOR GYRO
+    SUCCESS_OR_EXIST = "//span[contains(text(), 'already exist')] | //div[@id='content']//div[contains(text(), 'Success')]"
+    # STEP SUCCESS
     STEP_SUCCESS_MESSAGE = "(//div[@id='content']//div)[1]"
 
     # STEP TYPE - IN PROV SERVICE
@@ -180,6 +187,10 @@ class NfConstants:
     NF_STEP_AMOUNT_FIELD = "in_fup_step_amount"
     # SERVICES FLOW > ADD PAGE
     NF_FLOWS_NAME_INPUT = "name"
+
+    # SERVICES FLOW > EDIT PAGE
+    FLOW_ID_PROD = "(//div)[82]"
+    FLOW_ID_TESTBED = "(//div)[85]//div[2]"
 
     # SERVICES KEYWORDS > ADD PAGE
     NF_KEYWORDS_BULK_SERVICES_DROPDOWN = "svc_id"
@@ -205,7 +216,8 @@ class NfConstants:
     # PARAM MATRIX COLUMN
     COLUMN_PARAM_MATRIX_SERVICE_NAME = 6
     COLUMN_PARAM_MATRIX_SERVICE_ID = 7
-    COLUMN_PARAM_MATRIX_RPA_REMARKS = 12
+    # COLUMN_PARAM_MATRIX_RPA_REMARKS = 11
+    COLUMN_PARAM_MATRIX_RPA_REMARKS = 8
 
     # STEP TYPE EDIT PAGE
     EDIT_STEP_INPUT_FIELD_PARAM = "//input[@name='par']"

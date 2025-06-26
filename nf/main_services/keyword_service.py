@@ -68,8 +68,8 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
                 )
 
                 # Redirect to Keyword Add Page using bulk service id
-                wd.redirect_to_page(url)
-                wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+                wd.redirect_to_page(url, nf.NF_ADD_BTN_INPUT)
+                wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
                 # Section to fill up the fields
                 # Dropdown Operation Field
@@ -80,14 +80,10 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
                 wd.perform_action(
                     "name", nf.KEYWORD_REGEX_INPUT, "sendkeys", keyword_value
                 )
-                try:
-                    # Click Add Button
-                    wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-                    wd.wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
-
-                except (TimeoutError, TimeoutException):
-                    logger.info("Page time out, stopping page from loading...")
-                    wd.driver.execute_script("window.stop();")
+                # Click Submit Button
+                wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.CONTAINS_SUCCESS_MESSAGE, skip=True
+                )
 
                 logger.info(
                     f"Service Keyword Successfully Created for {keyword_key.upper()}"
@@ -96,10 +92,7 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
     except (TimeoutError, TimeoutException):
         logger.info("Page time out!, stopping page from loading...")
         wd.driver.execute_script("window.stop();")
-
-    except Exception as e:
-        logger.info(f"An error has occurred while creating keyword\nERROR:{e}")
-        wd.stop_process()
+        raise
 
 
 def get_keyword_operation(

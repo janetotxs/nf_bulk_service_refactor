@@ -21,7 +21,7 @@ gc = gspread.service_account(filename="secret_key.json")
 
 sh = gc.open_by_key(os.getenv("GSHEET_ID"))
 
-worksheet = sh.worksheet("Messages")
+worksheet = sh.worksheet("BulkService")
 
 
 # Function to Update a specific row via row and column coordinates
@@ -35,7 +35,6 @@ def update_row(row, column, worksheet, value):
         print(f"Unexpected error has occurred while updating cell. ERROR: {e}")
 
 
-rows = [2, 3]
+cells = worksheet.findall(datetime.datetime.now().strftime("%Y-%m-%d"))
 
-for row in rows:
-    update_row(row, 13, worksheet, 1192)
+print(cells)

@@ -12,11 +12,11 @@ nf = NfConstants()
 
 
 class FlowService:
-    def __init__(self, bulk_worksheet, webdriver, gsheet):
+    def __init__(self, worksheets, webdriver, gsheet):
         self.wd = webdriver
         self.gs = gsheet
-        self.bs_worksheet = bulk_worksheet
-        self.bs = BulkServices(bulk_worksheet, webdriver, gsheet)
+        self.worksheets = worksheets
+        self.bs = BulkServices(worksheets, webdriver, gsheet)
 
     # Function to Start Service Flow Process
     def nf_start_service_flows(
@@ -28,7 +28,7 @@ class FlowService:
         # --------------------START FLOWS PROCESS------------------------#
         try:
             # Create Worksheet once againa for bulk service sheet to get updated value rpa remarks
-            bs_row_data = self.bs_worksheet.row_values(bs_row)
+            bs_row_data = self.worksheets["bulkService"].row_values(bs_row)
 
             # Declare Variables
             step_flow_construct_value = bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT]
@@ -38,9 +38,8 @@ class FlowService:
 
             # Redirect to Add Service Flow Page
             url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=flows&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
-            self.wd.driver.get(url)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
-            logger.info(f"Site reached! {url}")
+            self.wd.redirect_to_page(url, nf.NF_ADD_BTN_INPUT)
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             # Execute Flow process based on Step and Flow construct
             # Check if step and flow construct value has keyword of 'prepaid ctl'
@@ -79,13 +78,22 @@ class FlowService:
             # Declare Variables
             step_flow_construct_value = bs_row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT]
             bs_service_id = bs_row_data[nf.NF_INDEX_SERVICE_ID]
+            flow_name = (
+                "DOUBLE_PROVISION"
+                if double_extend_value == "double"
+                else (
+                    "EXTEND_PROVISION"
+                    if double_extend_value == "extend"
+                    else "PROVISION"
+                )
+            )
             flow_id = None
 
             logger.info(f"Defining Flow for {step_flow_construct_value}")
 
             # Input Step Name Field
             self.wd.perform_action(
-                "name", nf.NF_FLOWS_NAME_INPUT, "sendkeys", "PROVISION"
+                "name", nf.NF_FLOWS_NAME_INPUT, "sendkeys", flow_name
             )
 
             # Dropdown First Step Field
@@ -105,9 +113,15 @@ class FlowService:
             # )
 
             # Get Unique Flow ID from div element page under Flow Details.
-            self.wd.wait_until_element("xpath", "(//div)[85]//div[2]", "visible")
-            flow_id = self.wd.driver.find_element(By.XPATH, "(//div)[85]//div[2]").text
-            # flow_name = self.wd.driver.find_element(By.XPATH, "(//div)[88]//div[2]").text
+            current_link = self.wd.driver.current_url
+
+            flow_id_element = (
+                nf.FLOW_ID_PROD if "10.25" in current_link else nf.FLOW_ID_TESTBED
+            )
+
+            self.wd.wait_until_element("xpath", flow_id_element, "visible")
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
+            flow_id = self.wd.driver.find_element(By.XPATH, flow_id_element).text
             logger.info(f"Flow ID Retrieved: {flow_id}")
 
             # Define step from IN CHARGE to EXTENDS FIRST EXPIRY
@@ -149,7 +163,10 @@ class FlowService:
                     )
 
                     # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-                    if double_extend_value != "double":
+                    if (
+                        double_extend_value != "double"
+                        and double_extend_value != "extend"
+                    ):
                         self.define_stepfrom_stepto(
                             step_type_data["unli_voice_id"],
                             step_type_data["unli_voice_name"],
@@ -212,7 +229,10 @@ class FlowService:
                     )
 
                     # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-                    if double_extend_value != "double":
+                    if (
+                        double_extend_value != "double"
+                        and double_extend_value != "extend"
+                    ):
                         self.define_stepfrom_stepto(
                             step_type_data["unli_voice_id"],
                             step_type_data["unli_voice_name"],
@@ -269,7 +289,7 @@ class FlowService:
                 self.gs.update_row(
                     bs_row,
                     nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
-                    self.bs_worksheet,
+                    self.worksheets["bulkService"],
                     rpa_remarks_final_value,
                 )
                 logger.info(
@@ -334,11 +354,16 @@ class FlowService:
             #    "http://10.47.69.195/nf/index.php?mod=flows&op=details&id=5039"
             # )
 
-            # Get Unique Flow ID from div element page under Flow Details. (//div)[82]
-            # self.wd.wait_until_element("xpath", "(//div)[85]//div[2]", "visible") # TESTBED
-            self.wd.wait_until_element("xpath", "(//div)[82]", "visible")  # PROD
-            flow_id = self.wd.driver.find_element(By.XPATH, "(//div)[82]").text
-            # flow_name = self.wd.driver.find_element(By.XPATH, "(//div)[88]//div[2]").text
+            # Get Unique Flow ID from div element page under Flow Details.
+            current_link = self.wd.driver.current_url
+
+            flow_id_element = (
+                nf.FLOW_ID_PROD if "10.25" in current_link else nf.FLOW_ID_TESTBED
+            )
+
+            self.wd.wait_until_element("xpath", flow_id_element, "visible")
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
+            flow_id = self.wd.driver.find_element(By.XPATH, flow_id_element).text
             logger.info(f"Flow ID Retrieved: {flow_id}")
 
             # Define step from IN CHARGE to EXTENDS FIRST EXPIRY for extend flow only
@@ -381,7 +406,10 @@ class FlowService:
                     )
 
                     # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-                    if double_extend_value != "double":
+                    if (
+                        double_extend_value != "double"
+                        and double_extend_value != "extend"
+                    ):
                         self.define_stepfrom_stepto(
                             step_type_data["unli_voice_id"],
                             step_type_data["unli_voice_name"],
@@ -444,7 +472,10 @@ class FlowService:
                     )
 
                     # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-                    if double_extend_value != "double":
+                    if (
+                        double_extend_value != "double"
+                        and double_extend_value != "extend"
+                    ):
                         self.define_stepfrom_stepto(
                             step_type_data["unli_voice_id"],
                             step_type_data["unli_voice_name"],
@@ -496,7 +527,10 @@ class FlowService:
                     )
 
                     # Define step from IN PROV SERVICE - Unli VOICE to HLR PLY
-                    if double_extend_value != "double":
+                    if (
+                        double_extend_value != "double"
+                        and double_extend_value != "extend"
+                    ):
                         self.define_stepfrom_stepto(
                             step_type_data["unli_voice_id"],
                             step_type_data["unli_voice_name"],
@@ -513,7 +547,9 @@ class FlowService:
                     )
 
             # Call Function from bulk_service to execute defining Default and API Flow of Bulk Services using flow ID and flow name
-            bs.nf_assign_bulk_service_flow(double_extend_value, bs_service_id, flow_id)
+            self.bs.nf_assign_bulk_service_flow(
+                double_extend_value, bs_service_id, flow_id
+            )
             flow_string = f"{'Base' if double_extend_value == '' else double_extend_value.upper()}"
 
             logger.info(f"Bulk Service {flow_string} Flow and API Flow Updated")
@@ -534,7 +570,7 @@ class FlowService:
                 self.gs.update_row(
                     bs_row,
                     nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
-                    self.bs_worksheet,
+                    self.worksheets["bulkService"],
                     rpa_remarks_final_value,
                 )
                 logger.info(

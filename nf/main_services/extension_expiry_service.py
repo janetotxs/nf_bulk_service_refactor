@@ -2,6 +2,7 @@ from utils.env_loader import get_env_variable
 from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 from selenium.common.exceptions import TimeoutException
+import time
 
 # Call Constants
 nf = NfConstants()
@@ -27,7 +28,7 @@ def create_extension_expiry(bs_service_id, bs_row_data, wd):
         wd.driver.get(
             f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_extension_expiries&op=add&details_id={bs_service_id}"
         )
-        wd.wait_until_element("name", nf.SERVICE_PARAM_INPUT, "visible")
+        wd.wait_until_element("name", nf.SERVICE_PARAM_INPUT, "visible", timeout=60)
 
         logger.info("Filling up extension expiry fields...")
         # Clear Param Input
@@ -50,8 +51,10 @@ def create_extension_expiry(bs_service_id, bs_row_data, wd):
         )
         try:
             # Click Add Button
-            logger.info("Creating Extension Service Expiry...")
+            logger.info("Submitting Extension Service Expiry...")
             wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+            time.sleep(3)
+            wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable", timeout=60)
 
         except TimeoutException:
             logger.info("Page time out, stopping page from loading...")
@@ -60,5 +63,4 @@ def create_extension_expiry(bs_service_id, bs_row_data, wd):
         logger.info("Service Extension Expiry Successfully Created!")
 
     except Exception as e:
-        logger.info(f"An error has occurred while creating keyword\nERROR:{e}")
-        wd.stop_process()
+        logger.info(f"An error has occurred while creating service keyword\nERROR:{e}")

@@ -3,6 +3,7 @@ from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 from utils.env_loader import get_env_variable
 from selenium.common.exceptions import TimeoutException
+import time
 
 
 # logger = setup_logger(service_name=f"NF {__name__}")
@@ -22,9 +23,10 @@ def define_bs_simple_service_group(bs_service_id, wd):
         # )
 
         url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=simple_service_groups&op=details&id=1"
-        wd.redirect_to_page(url)
-
-        wd.wait_until_element("xpath", nf.SSG_ADD_BTN_ACCESS_CODE, "visible")
+        wd.redirect_to_page(url, nf.SSG_ADD_BTN_ACCESS_CODE)
+        wd.wait_until_element(
+            "xpath", nf.SSG_ADD_BTN_ACCESS_CODE, "clickable", timeout=60
+        )
 
         logger.info("Simple Service Group Detail Page Successfully Reached!")
 
@@ -44,12 +46,17 @@ def define_bs_simple_service_group(bs_service_id, wd):
             logger.info(
                 f"Bulk Service {bs_service_id} Successfully Defined in Simple Service Group [DATA_BAL] With Priority 1"
             )
+            time.sleep(3)
+            wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable", timeout=60)
+
         except TimeoutException:
-            logger.info("Page time out, refreshing current page...")
-            wd.driver.refresh()
+            logger.info(
+                "Page timeout, no need to wait, will proceed to next process..."
+            )
+            wd.execute_script("window.stop();")
+            pass
 
     except Exception as e:
         logger.info(
             f"An error has occurred while defining the bulk service in simple service group\nERROR: {e}"
         )
-        wd.stop_process()

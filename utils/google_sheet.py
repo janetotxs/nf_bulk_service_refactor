@@ -43,7 +43,15 @@ class GSheetClient:
         worksheet = self.spreadsheet.worksheet(worksheet_name)
         return worksheet
 
+    # NEW ADDED METHODS ====================================================
     # Get row data based on current date.
+    def create_worksheets(self, dict_worksheet_name: Dict) -> Dict:
+        dict_worksheet_result = {}
+        for key, value in dict_worksheet_name.items():
+            worksheet = self.spreadsheet.worksheet(value)
+            dict_worksheet_result[key] = worksheet
+        return dict_worksheet_result
+
     def get_pending_rows(self, worksheet, column_date, column_rpa_remarks):
         logger.info("Fetching rows to work on for today...")
         try:

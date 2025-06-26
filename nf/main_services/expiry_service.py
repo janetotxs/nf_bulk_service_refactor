@@ -31,16 +31,20 @@ class ExpiryService:
             #     f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_expiries&op=add&details_id={service_id}"
             # )
             url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_expiries&op=add&details_id={service_id}"
-            self.wd.redirect_to_page(url)
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.redirect_to_page(url, nf.NF_ADD_BTN_INPUT)
+            self.wd.wait_until_element(
+                "xpath", nf.NF_ADD_BTN_INPUT, "clickable", timeout=60
+            )
 
             # Section to Input Default Values
             # If Default Duration in Days value is No Expiry, choose radio button no expiry, else, multiple by 24
-            logger.info("Filling up Service Expiry Fields...")
+            logger.info("Filling up service expiry fields...")
+
+            logger.info(f"Input Expiry: {int(default_duration_in_days_value) * 24}")
             if "no" in default_duration_in_days_value:
                 self.wd.perform_action("id", "et_2", "click")
             else:
-                # Input Expiry Field
+                # Input Expiry
                 self.wd.perform_action(
                     "id",
                     "expiry",
@@ -50,11 +54,9 @@ class ExpiryService:
 
                 logger.info("Submitting Service Expiry with Default Values...")
                 # Click Add Button
-                self.wd.submit_form_and_validate_success(
-                    "xpath", nf.NF_ADD_BTN_INPUT, nf.NF_SUCCESS_MESSAGE
+                self.wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.CONTAINS_SUCCESS_MESSAGE, skip=True
                 )
-                self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
-                # self._click_add_and_wait()
 
             logger.info("Service Expiry Successfully Created With Default Fields")
 
@@ -67,7 +69,14 @@ class ExpiryService:
                 for row in param_matrix_rows:
                     param_matrix_data = param_worksheet.row_values(row)
                     logger.info(
-                        "Found ParamMatrix inputs for Service Expiry, filling up Param fields..."
+                        "Found ParamMatrix inputs for service expiry, filling up Param fields..."
+                    )
+                    self.wd.redirect_to_page(url)
+                    self.wd.wait_until_element(
+                        "xpath", nf.NF_ADD_BTN_INPUT, "clickable", timeout=60
+                    )
+                    logger.info(
+                        f"Input Param Field: {param_matrix_data[nf.INDEX_PARAM_MATRIX_PARAM]}"
                     )
                     # Clear Input Param Field
                     self.wd.perform_action("name", nf.SERVICE_PARAM_INPUT, "clear")
@@ -80,6 +89,9 @@ class ExpiryService:
                         param_matrix_data[nf.INDEX_PARAM_MATRIX_PARAM],
                     )
 
+                    logger.info(
+                        f"Input Expiry: {int(param_matrix_data[nf.INDEX_PARAM_MATRIX_DURATION]) * 24}"
+                    )
                     # Input Expiry
                     self.wd.perform_action(
                         "id",
@@ -89,8 +101,11 @@ class ExpiryService:
                     )
                     # Handle after submitting form.. If taking time to load and doesn't need to get the element success message...
                     logger.info("Submitting Service Expiry with Param Values...")
-                    self.wd.submit_form_and_validate_success(
-                        "xpath", nf.NF_ADD_BTN_INPUT, nf.NF_SUCCESS_MESSAGE
+                    self.wd.submit_form_and_wait_for_success(
+                        "xpath",
+                        nf.NF_ADD_BTN_INPUT,
+                        nf.CONTAINS_SUCCESS_MESSAGE,
+                        skip=True,
                     )
                     # self._click_add_and_wait()
 
@@ -105,7 +120,7 @@ class ExpiryService:
         try:
             logger.info("Clicking Add button...")
             self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-            self.wd.wait_until_element("xpath", nf.NF_SUCCESS_MESSAGE, "visible")
+            self.wd.wait_until_element("xpath", nf.CONTAINS_SUCCESS_MESSAGE, "visible")
             logger.info("Service Expiry successfully created.")
         except TimeoutException:
             logger.warning(

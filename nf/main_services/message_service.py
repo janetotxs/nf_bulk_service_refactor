@@ -55,7 +55,8 @@ def create_message(wd, gs):
                 if message_type == "Reminder Message":
 
                     url_service_msg = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=reminder_messages&op=add&svc_id={bs_service_id}"
-                    wd.redirect_to_page(url_service_msg)
+                    wd.redirect_to_page(url_service_msg, nf.NF_ADD_BTN_INPUT)
+                    wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
                     wd.perform_action(
                         "xpath",
@@ -93,10 +94,11 @@ def create_message(wd, gs):
                         f"Message has been successfully created for Row: {row_index}"
                     )
                     # wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-                    wd.submit_form_and_validate_success(
+                    wd.submit_form_and_wait_for_success(
                         "xpath",
                         nf.NF_ADD_BTN_INPUT,
                         "//div[contains(@class, 'success') or contains(@class, 'error')]",
+                        skip=True,
                     )
                     gs.update_row(
                         row_index,
@@ -108,8 +110,9 @@ def create_message(wd, gs):
                 else:
 
                     url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_msgs&op=add&details_id={bs_service_id}"
-                    wd.redirect_to_page(url)
-                    wd.wait_until_element("name", "mtype", "visible")
+                    wd.redirect_to_page(url, nf.NF_ADD_BTN_INPUT)
+                    # wd.wait_until_element("name", "mtype", "visible")
+                    wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
                     wd.perform_action(
                         "xpath",
@@ -140,14 +143,13 @@ def create_message(wd, gs):
 
                     wd.perform_action("name", "message", "sendkeys", message)
 
-                    logger.info(
-                        f"Message has been successfully created for Row: {row_index}"
-                    )
+                    logger.info(f"Creating message for Row: {row_index}")
                     # wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-                    wd.submit_form_and_validate_success(
+                    wd.submit_form_and_wait_for_success(
                         "xpath",
                         nf.NF_ADD_BTN_INPUT,
                         "//div[contains(@class, 'success') or contains(@class, 'error')]",
+                        skip=True,
                     )
                     gs.update_row(
                         row_index,

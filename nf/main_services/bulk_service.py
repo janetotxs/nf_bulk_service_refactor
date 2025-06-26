@@ -18,66 +18,110 @@ nf = NfConstants()
 
 
 class BulkServices:
-    def __init__(self, bs_worksheet, webdriver, gsheet):
+    def __init__(self, worksheets, webdriver, gsheet):
         self.wd = webdriver
         self.gs = gsheet
-        self.bs_worksheet = bs_worksheet
+        self.worksheets = worksheets
         self.list_service_id = []
         self.es = ExpiryService(self.wd, self.gs)
 
     # Function to create bulk service
     def create_bulk_service(self, row_data):
+
+        # Redirect to Add Page of Bulk Service
         url = get_env_variable("WEBTOOL_BULK_SERVICES_ADD_FULL_URL")
-        self.wd.redirect_to_page(url)
-        self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+        self.wd.redirect_to_page(url, nf.NF_ADD_BTN_INPUT)
+        self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible", timeout=60)
 
         logger.info(f"Creating bulk service for {row_data[nf.NF_INDEX_NAME]}")
         try:
+            logger.info(f"Input Name: {row_data[nf.NF_INDEX_NAME]}")
             self.wd.perform_action(
                 "xpath", nf.NF_INPUT_NAME, "sendkeys", row_data[nf.NF_INDEX_NAME]
             )
+
+            logger.info(f"RadioBtn Service Class: Bulk Service")
             self.wd.perform_action(
                 "xpath", nf.NF_BS_SERVICE_CLASS_BULK_SERVICE, "click"
             )
+            # This verify the input value for wallet if existing, if not, will create new data service
             self.handle_group_status_inquiry(
                 row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY],
                 row_data[nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT],
                 row_data[nf.NF_INDEX_WALLET_TYPE],
                 row_data[nf.NF_INDEX_WALLET],
             )
+
+            logger.info(f"Dropdwn Status: ACTIVE")
             self.handle_nf_bs_status("active")
+
+            logger.info(f"Input Thread Count: {row_data[nf.NF_INDEX_THREAD_COUNT]}")
             self.wd.perform_action(
                 "name",
                 nf.NF_BS_THREAD_COUNT_INPUT_NAME,
                 "sendkeys",
                 row_data[nf.NF_INDEX_THREAD_COUNT],
             )
+            logger.info("Dropdwn Bulk Service Type: Wallet-Based")
             self.handle_nf_bs_type("Wallet-Based")
+
+            logger.info(f"Checkbox Brands: {row_data[nf.NF_INDEX_BRAND]}")
             self.handle_nf_bs_brands(row_data[nf.NF_INDEX_BRAND])
+
+            logger.info("Input Timeout(sec): 60")
             self.wd.perform_action("name", nf.NF_BS_TIMEOUT_SEC, "sendkeys", 60)
+
+            logger.info("Input Status Charged Amount: 0")
             self.wd.perform_action(
                 "name", nf.NF_BS_STATUS_CHARGED_AMOUNT, "sendkeys", 0
             )
+            logger.info("Input Balance Charged Amount: 0")
             self.wd.perform_action(
                 "name", nf.NF_BS_BALANCE_CHARGED_AMOUNT, "sendkeys", 0
             )
+
+            logger.info(f"Input SMP Name: {row_data[nf.NF_INDEX_SMP_NAME]}")
             self.wd.perform_action(
                 "name", nf.NF_BS_SMP_NAME, "sendkeys", row_data[nf.NF_INDEX_SMP_NAME]
             )
+
+            logger.info("Input Access Code: 8080")
             self.wd.perform_action(
                 "name", nf.NF_BS_DEFAULT_ACCESS_CODE, "sendkeys", 8080
             )
+
+            logger.info("Input Queue Limit: 1000")
             self.wd.perform_action("name", nf.NF_BS_QUEUE_LIMIT, "sendkeys", 1000)
+
+            logger.info(
+                f"RadioBtn Deprov on empty: {row_data[nf.NF_INDEX_DEPROV_ON_EMPTY]}"
+            )
             self.handle_bs_deprov_on_empty(row_data[nf.NF_INDEX_DEPROV_ON_EMPTY])
+
+            logger.info("RadioBtn Pre-Expiry Notif: No")
             self.handle_bs_preexpiry_notifs("no")
+
+            logger.info(
+                f"RadioBtn Subscription Less: {row_data[nf.NF_INDEX_SUBSCRIPTION_LESS]}"
+            )
             self.handle_bs_subscription_less(row_data[nf.NF_INDEX_SUBSCRIPTION_LESS])
+
+            logger.info(f"RadioBtn Max Recurrence: No Recurrence")
             self.wd.perform_action("id", nf.NF_BS_MAX_RECURRENCE, "click")
+
+            logger.info(
+                f"Input Max Daily Extensions: {row_data[nf.NF_INDEX_MAX_DAILY_EXT]}"
+            )
             self.wd.perform_action("name", nf.NF_BS_MAX_DAILY_EXTENSION, "clear")
             self.wd.perform_action(
                 "name",
                 nf.NF_BS_MAX_DAILY_EXTENSION,
                 "sendkeys",
                 row_data[nf.NF_INDEX_MAX_DAILY_EXT],
+            )
+
+            logger.info(
+                f"Input Max Total Extensions: {row_data[nf.NF_INDEX_MAX_TOTAL_EXT]}"
             )
             self.wd.perform_action("name", nf.NF_BS_MAX_TOTAL_EXTENSION, "clear")
             self.wd.perform_action(
@@ -86,12 +130,16 @@ class BulkServices:
                 "sendkeys",
                 row_data[nf.NF_INDEX_MAX_TOTAL_EXT],
             )
+
+            logger.info(f"Input Promo Name: {row_data[nf.NF_INDEX_PROMO_NAME]}")
             self.wd.perform_action(
                 "name",
                 nf.NF_BS_PROMO_NAME,
                 "sendkeys",
                 row_data[nf.NF_INDEX_PROMO_NAME],
             )
+
+            logger.info("All input fields are done!")
 
             # Section to get success message after clicking submit button
             success_msg = self.wd.submit_form_and_wait_for_success(
@@ -101,7 +149,7 @@ class BulkServices:
             # Section to get the service id in Success Message
             word_service_id = get_after_word(success_msg, "Service with id:")
             service_id = word_service_id.replace(".", "")
-            logger.info(f"Bulk Service created with ID: {service_id}")
+            logger.info(f"Bulk Service Id Retrieved: {service_id}")
 
             # Call function to Start Service Expiry Service
             self.es.create_service_expiry(row_data, service_id)
@@ -131,6 +179,7 @@ class BulkServices:
 
     # Handle Radio Button Wallet Type.
     def handle_nf_bs_wallet_type(self, wallet_type_value):
+        logger.info(f"RadioBtn Wallet Type: {wallet_type_value}")
         element_map = {
             "sms/voice": nf.BS_WALLET_TYPE_SMSVOICE,
             "data": nf.BS_WALLET_TYPE_DATA,
@@ -142,6 +191,7 @@ class BulkServices:
     # Function to check if wallet value exist return boolean True, if not, return False
     def check_wallet(self, wallet_value):
         try:
+            logger.info(f"Dropdwn Name: {wallet_value}")
             self.wd.driver.find_element(
                 By.XPATH, f"//option[contains(text(),'{wallet_value.strip()}')]"
             ).click()
@@ -181,19 +231,13 @@ class BulkServices:
 
     # Handle Bulk Service Status Dropdown
     def handle_nf_bs_status(self, nf_status_value):
-        try:
-            element_map = {
-                "inactive": nf.BS_STATUS_INACTIVE,
-                "no prov": nf.BS_STATUS_NOPROV,
-            }
+        element_map = {
+            "inactive": nf.BS_STATUS_INACTIVE,
+            "no prov": nf.BS_STATUS_NOPROV,
+        }
 
-            element = element_map.get(nf_status_value, nf.BS_STATUS_ACTIVE)
-            self.wd.perform_action("xpath", element, "click")
-
-        except Exception as e:
-            logger.info(
-                f"An error has occurred in 'handle_nf_bs_status' function. ERROR: {e}"
-            )
+        element = element_map.get(nf_status_value, nf.BS_STATUS_ACTIVE)
+        self.wd.perform_action("xpath", element, "click")
 
     # Handle Bulk Service Type Dropdown
     def handle_nf_bs_type(self, nf_type_value):
@@ -281,7 +325,7 @@ class BulkServices:
             self.wd.driver.get(
                 f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=bulk_services&op=edit&id={bs_service_id}"
             )
-            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "visible")
+            self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
             # Input Default Flow Dropwdown
             self.wd.perform_action(
@@ -298,55 +342,65 @@ class BulkServices:
                 )
 
             # Handle after editing form. Stop loading the page if its taking time to load and doesn't need to get the element success message...
-            try:
-                # Click Update button
-                self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-            except (TimeoutError, Exception):
-                self.wd.driver.execute_script("window.stop();")
-                raise
+            # Click Update button
+            # self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+
+            self.wd.submit_form_and_wait_for_success(
+                "xpath", nf.NF_ADD_BTN_INPUT, nf.SUCCESS_MESSAGE
+            )
 
         except Exception as e:
             logger.info(
-                f"An error has occurred while assigning in Edit page of bulk service flow\nERROR: {e}"
+                f"An error has occurred while assigning flow in Edit page of bulk service id: {bs_service_id}\nERROR: {e}"
             )
+            raise
 
     # Orchestrator of bulk service file
     def nf_start_bulk_services(self):
 
         # Fetch current deployment date rows
         pending_rows = self.gs.get_pending_rows(
-            self.bs_worksheet,
+            self.worksheets["bulkService"],
             nf.COLUMN_BULK_SERVICE_DEPLOYMENT_DATE,
             nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
         )
 
         # If there's no deployment date today to work on, terminate script
         if not pending_rows:
-            logger.info("No deployment today to work on, terminating bot...")
+            logger.warning("No deployment today to work on, terminating bot...")
             self.wd.stop_process()
             # return []
 
         # Start loop using pending rows that has been fetched
         for i, row in enumerate(pending_rows):
             try:
-                row_data = self.bs_worksheet.row_values(row)
+                # Get row data
+                row_data = self.worksheets["bulkService"].row_values(row)
+
+                # Call function create_bulk_service to start the process
                 service_id = self.create_bulk_service(row_data)
-                self.gs.update_row(row, 1, self.bs_worksheet, service_id)
+
+                # Update Bulk Service RPA Remarks after creation
+                self.gs.update_row(row, 1, self.worksheets["bulkService"], service_id)
                 self.gs.update_row(
                     row,
-                    self.bs_worksheet.col_count,
-                    self.bs_worksheet,
+                    self.worksheets["bulkService"].col_count,
+                    self.worksheets["bulkService"],
                     "Bulk Services Created, in progress defining of steps and flows",
                 )
                 self.list_service_id.append(service_id)
 
             except BulkServiceError as e:
                 logger.error(f"Row {row}: Bulk service failed: {e}")
-                self.gs.update_rpa_remarks_error(row, str(e), self.bs_worksheet)
+                self.gs.update_rpa_remarks_error(
+                    row, str(e), self.worksheets["bulkService"]
+                )
 
             except ExpiryServiceError as e:
                 logger.error(f"Row {row}: Service Expiry failed: {e}")
-                self.gs.update_rpa_remarks_error(row, str(e), self.bs_worksheet)
+                self.gs.update_rpa_remarks_error(
+                    row, str(e), self.worksheets["bulkService"]
+                )
 
             except Exception as e:
                 logger.exception(f"Unexpected error at row {row}: {e}")
@@ -361,7 +415,7 @@ class BulkServices:
 
         # Return successful rows
         list_success_rows = [
-            self.bs_worksheet.find(str(service_id), in_column=1).row
+            self.worksheets["bulkService"].find(str(service_id), in_column=1).row
             for service_id in self.list_service_id
         ]
         logger.info(f"Successful Bulk Service Rows: {list_success_rows}")

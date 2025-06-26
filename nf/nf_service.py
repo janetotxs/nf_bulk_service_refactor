@@ -17,7 +17,11 @@ nf = NfConstants()
 
 start_time_info = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 start_time = time.time()
-
+dict_worksheets = {
+    "bulkService": nf.WORKSHEET_TAB_BULK_SERVICES,
+    "paramMatrix": nf.WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX,
+    "messages": nf.WORKSHEET_TAB_BULK_SERVICES_TAB_MESSAGES,
+}
 # logger = setup_logger(service_name="NF")
 
 
@@ -25,9 +29,9 @@ class NFService:
     def __init__(self):
         self.wd = WebDriver()
         self.gs = GSheetClient()
-        self.bs_worksheet = self.gs.create_worksheet(nf.WORKSHEET_TAB_BULK_SERVICES_V2)
-        self.bs = BulkServices(self.bs_worksheet, self.wd, self.gs)
-        self.sf = StepAndFlowConstructService(self.bs_worksheet, self.wd, self.gs)
+        self.worksheets = self.gs.create_worksheets(dict_worksheets)
+        self.bs = BulkServices(self.worksheets, self.wd, self.gs)
+        self.sf = StepAndFlowConstructService(self.worksheets, self.wd, self.gs)
 
     # Login Sequence Function.
     def login_sequence(self):
@@ -36,6 +40,7 @@ class NFService:
             url_param = get_env_variable("WEBTOOL_LOGIN_FULL_URL")
             print(url_param)
             self.wd.redirect_to_page(url_param)
+            self.wd.wait_until_element("id", nf.NF_LOGIN_BUTTON, "clickable")
 
             # Get Credential (from 'Creds' sheet tab) and assign data value to global variable 'creds_data' as array
             logger.info("Account Authorized!, Logging into NF Webtool..")
@@ -79,12 +84,12 @@ class NFService:
     # Clean Up Sequence Function
     def cleanup_sequence(self):
         logger.info("RPA Bot Process Done. Terminating Bot")
-
+        duration_seconds = time.time() - start_time
         logger.info(
             f"\nTimestamp Report:"
             f"\nRPA Start Time: {start_time_info}"
             f"\nRPA End Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            f"\n--- Bot Duration: {time.time() - start_time:.2f} seconds ---"
+            f"\n--- Bot Duration: {str(datetime.timedelta(seconds=int(duration_seconds)))} ---"
         )
         self.wd.stop_process()
 
