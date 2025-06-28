@@ -1,5 +1,6 @@
 import logging
 from itertools import zip_longest
+from typing import List, Dict, Any
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,24 @@ def get_after_word(sentence, word):
     next_word = remaining_sentence.split(" ")[0]
 
     return next_word
+
+
+def convert_string_hashmap(value: str, convert_to: str) -> Dict | List:
+    # Convert string to dict
+    if convert_to == "dict":
+        string_replaced = value.replace(" | ", ",").replace(": ", ",")
+        list_value = string_replaced.split(",")
+        hashmap = {
+            list_value[i]: list_value[i + 1] for i in range(0, len(list_value), 2)
+        }
+        logger.info(f"Converted from String to Dictionary: {hashmap}")
+        return hashmap
+
+    # Convert dict back to original string format
+    elif convert_to == "string":
+        converted_string = " | ".join(f"{key}: {value}" for key, value in value.items())
+        logger.info(f"Converted from Dictionary to String: {converted_string}")
+        return converted_string
 
 
 def nf_get_in_prov_values(prefix_value, sms_voice_key, step_type):

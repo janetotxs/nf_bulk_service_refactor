@@ -257,7 +257,7 @@ def create_flow_prepaid_ctl(
         try:
             # Update current row Bulk service RPA Remarks
             prefix_success_message = (
-                bs_row_data[nf.NF_INDEX_RPA_REMARKS]
+                bs_row_data[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]
                 if double_extend_value == "double" or double_extend_value == "extend"
                 else "Bulk Service Successfully Created"
             )
@@ -516,7 +516,7 @@ def create_flow_prepaid_opm(
         try:
             # Update current row Bulk service RPA Remarks
             prefix_success_message = (
-                bs_row_data[nf.NF_INDEX_RPA_REMARKS]
+                bs_row_data[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]
                 if double_extend_value == "double" or double_extend_value == "extend"
                 else "Bulk Service Successfully Created"
             )

@@ -8,7 +8,7 @@ def main():
     # NF
     # Start NF Service
     nf = NFService()
-    nf.run_sequence()
+    nf.run_sequence(fail_check=True)
 
 
 if __name__ == "__main__":

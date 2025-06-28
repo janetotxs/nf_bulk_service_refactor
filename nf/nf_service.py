@@ -1,19 +1,21 @@
 from utils.env_loader import get_env_variable
-from utils.logger import setup_logger
+from utils.logger import setup_logger, log_traceback, finalize_log_upload
 from utils.google_sheet import GSheetClient
 from utils.web_driver import WebDriver
 from nf.main_services import bulk_service as bs
 from nf.main_services import step_and_flow_construct_service as sf
+
 from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 import datetime
 import time
 from nf.main_services.bulk_service import BulkServices
 from nf.main_services.step_and_flow_construct_service import StepAndFlowConstructService
-from nf.main_services import message_service as ms
 
 # Call Constants
 nf = NfConstants()
+
+# logger = setup_logger(service_name="NF", gs_client=gs)
 
 start_time_info = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 start_time = time.time()
@@ -22,7 +24,6 @@ dict_worksheets = {
     "paramMatrix": nf.WORKSHEET_TAB_BULK_SERVICES_TAB_PARAM_MATRIX,
     "messages": nf.WORKSHEET_TAB_BULK_SERVICES_TAB_MESSAGES,
 }
-# logger = setup_logger(service_name="NF")
 
 
 class NFService:
@@ -93,15 +94,21 @@ class NFService:
         )
         self.wd.stop_process()
 
-    # Function to start the process for NF
-    def run_sequence(self):
-        # Calls web driver and gsheet
+    # Function to check failed services
+    def fallback_sequence(self):
+        from nf.fallback_services.fallback_controller import FallbackController
 
-        # NF Login Sequence
+        fs = FallbackController(self.wd, self.gs, self.worksheets)
+        fs.start_nf_fallback_service()
+
+    # Function to call NF sequence
+    def run_sequence(self, fail_check=False):
+
         self.login_sequence()
 
-        # NF Process Sequence
-        self.process_sequence()
+        if fail_check:
+            self.fallback_sequence()
+        else:
+            self.process_sequence()
 
-        # NF Clean up Sequence
         self.cleanup_sequence()

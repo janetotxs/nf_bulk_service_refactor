@@ -150,7 +150,7 @@ class StepAndFlowConstructService:
                     bs_row_data_updated_1 = self.worksheets["bulkService"].row_values(
                         row
                     )
-                    rpa_remarks_gyro = f"{bs_row_data_updated_1[nf.NF_INDEX_RPA_REMARKS]} | GYRO: Success"
+                    rpa_remarks_gyro = f"{bs_row_data_updated_1[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]} | GYRO: Success"
                     self.gs.update_row(
                         row,
                         nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
@@ -166,7 +166,7 @@ class StepAndFlowConstructService:
                     ssg.define_bs_simple_service_group(bs_service_id, self.wd)
 
                     # Update RPA Remarks when Simple Service Group Success
-                    rpa_remarks_ssg = f"{bs_row_data_updated_2[nf.NF_INDEX_RPA_REMARKS]} | SIMPLE SERVICE GROUP: Success"
+                    rpa_remarks_ssg = f"{bs_row_data_updated_2[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]} | SIMPLE SERVICE GROUP: Success"
                     self.gs.update_row(
                         row,
                         nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
@@ -256,8 +256,8 @@ class StepAndFlowConstructService:
 
                 return step_type_data, incharge_extend_data
 
-            # Calling function to execute step type services for Prepaid OPM
-            elif "prepaid opm" in step_and_flow_construct_value:
+            # preparation for postpaid or other construct
+            elif "postpaid" in step_and_flow_construct_value:
                 "TODO"
 
                 logger.info(

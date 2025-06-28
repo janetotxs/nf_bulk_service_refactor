@@ -1,12 +1,13 @@
 import gspread
 import logging
+from utils.logger2 import logger
 import datetime
 from google.oauth2.service_account import Credentials
 from typing import List, Dict, Any
 from utils.env_loader import get_env_variable
 from nf.nf_constants import NfConstants
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 # Call Constants
 nf = NfConstants()
@@ -18,17 +19,20 @@ class GSheetClient:
 
         # To Authorize Service Account Access to spreadsheet via gsheet id
         if scopes is None:
-            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+            scopes = [
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ]
 
         if not service_account_file:
             service_account_file = get_env_variable("GOOGLE_SERVICE_ACCOUNT")
 
-        credentials = Credentials.from_service_account_file(
+        self.credentials = Credentials.from_service_account_file(
             service_account_file, scopes=scopes
         )
-        client = gspread.authorize(credentials)
+        client = gspread.authorize(self.credentials)
         self.spreadsheet = client.open_by_key(get_env_variable("GSHEET_ID_DEV"))
-        print("Authorized scopes:", credentials.scopes)
+        print("Authorized scopes:", self.credentials.scopes)
 
     # Get Google Worksheet Data using spreadsheet ID
     def get_sheet_data(self, worksheet_name: str) -> List[Dict[str, Any]]:
@@ -52,7 +56,33 @@ class GSheetClient:
             dict_worksheet_result[key] = worksheet
         return dict_worksheet_result
 
-    def get_pending_rows(self, worksheet, column_date, column_rpa_remarks):
+    def get_pending_rows(self, worksheet, column_date, column_rpa_start, status=None):
+        try:
+            expected_status = "failed" if status == "failed" else "success"
+            logger.info("Fetching rows to work on...")
+            data_sheet = worksheet.findall(
+                datetime.datetime.now().strftime("%Y-%m-%d"), in_column=column_date
+            )
+            # Check rpa remarks column if there's a text that does not contain 'failed' keyword to determine the pending entries, if true, append row value to an array variable.
+            result = []
+            for cell in data_sheet:
+                row_data = worksheet.row_values(cell.row)
+                # print(row_data)
+
+                for i in range(column_rpa_start, len(row_data)):
+                    logger.info(f"{row_data[i]} = index {i}")
+                    if expected_status in row_data[i].lower():
+                        result.append(cell.row)
+                        logger.info(f"Pending Row Added: {cell.row}")
+                        break
+            # print(result)
+            return result
+
+        except Exception as e:
+            logger.info(f"An error has occurred while fetching rows..\nERROR:{e}")
+            raise
+
+    def get_pending_rows2(self, worksheet, column_date, column_rpa_remarks):
         logger.info("Fetching rows to work on for today...")
         try:
             current_date_cells = worksheet.findall(

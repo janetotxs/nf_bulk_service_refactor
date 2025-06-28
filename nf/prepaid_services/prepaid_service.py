@@ -41,51 +41,73 @@ def start_construct_prepaid(
             or "prepaid opm" in step_flow_construct_value
             and double_extend_value == "extend"
         ):
-            logger.info("Processing IN CHARGE")
-            in_charge_data = st.step_type_in_charge(
-                double_extend_value, bs_service_id, bs_row_data, param_worksheet
-            )
-            if double_extend_value != "extend":
-                dict_incharge_extend_data.update(in_charge_data)
+            try:
+                in_charge_data = st.step_type_in_charge(
+                    double_extend_value, bs_row_data, param_worksheet
+                )
+                dict_step_type_data.update(in_charge_data)
+
+                if double_extend_value != "extend":
+                    dict_incharge_extend_data.update(in_charge_data)
+            except TypeError:
+                logger.info(
+                    "Returned object is empty => in_charge_data, proceed to next step type.."
+                )
+                # UPDATE RPA REMARK HERE FOR FAILED CREATION
+                pass
         else:
-            logger.info("Skipping IN CHARGE - No Creation Needed")
-            in_charge_data = {}
+            logger.info("Skipping IN CHARGE - No creation needed for this Flow")
 
         if double_extend_value != "double":
-            # Execute Step Type Process = EXTEND FIRST EXPIRY
-            logger.info("Processing EXTEND FIRST EXPIRY")
-            extend_first_expiry_data = st.step_type_extend_first_expiry(
-                double_extend_value,
-                old_extend_step_id,
-                bs_service_id,
-                bs_row_data,
-                param_worksheet,
-            )
-            dict_incharge_extend_data.update(extend_first_expiry_data)
+            try:
+                # Execute Step Type Process = EXTEND FIRST EXPIRY
+                extend_first_expiry_data = st.step_type_extend_first_expiry(
+                    double_extend_value,
+                    old_extend_step_id,
+                    bs_service_id,
+                    bs_row_data,
+                    param_worksheet,
+                )
+                dict_step_type_data.update(extend_first_expiry_data)
+                dict_incharge_extend_data.update(extend_first_expiry_data)
+            except TypeError:
+                logger.info(
+                    "Returned object is empty => extend_first_expiry_data, proceed to next step type.."
+                )
+                # UPDATE RPA REMARK HERE FOR FAILED CREATION
+                pass
 
         else:
-            logger.info("Skipping EXTEND FIRST EXPIRY - No Creation Needed")
-            extend_first_expiry_data = {}
+            logger.info(
+                "Skipping EXTEND FIRST EXPIRY - No creation needed for this Flow"
+            )
 
         # =====================Data - DATA PROV WITH KEYWORD MAPPING, DATA PROV EXTENSION WITH KEYWORD MAPPING================#
         # =====================and DATA EXTEND WALLET EXPIRY FLOW SECTION=====================================================#
         # If there's a 'data' keyword in Step and Flow Construct value, execute this section
         if "data" in step_flow_construct_value:
-
-            # For extend flow - execute function step_type_data_extend_wallet_expiry
-            if double_extend_value == "extend":
-                data_volume_bulk_data = st.step_type_data_extend_wallet_expiry(
-                    bs_service_id, bs_row_data
+            try:
+                # For extend flow - execute function step_type_data_extend_wallet_expiry
+                if double_extend_value == "extend":
+                    data_volume_bulk_data = st.step_type_data_extend_wallet_expiry(
+                        bs_service_id, bs_row_data
+                    )
+                    dict_step_type_data.update(data_volume_bulk_data)
+                # For standard or double flow - execute function step_type_data_prov_process
+                else:
+                    data_volume_bulk_data = st.step_type_data_prov_process(
+                        double_extend_value, bs_service_id, bs_row_data, param_worksheet
+                    )
+                    dict_step_type_data.update(data_volume_bulk_data)
+            except TypeError:
+                logger.info(
+                    "Returned object is empty => data_volume_bulk_data, proceed to next step type.."
                 )
-            # For standard or double flow - execute function step_type_data_prov_process
-            else:
-                logger.info("Processing DATA PROV PROCESS")
-                data_volume_bulk_data = st.step_type_data_prov_process(
-                    double_extend_value, bs_service_id, bs_row_data, param_worksheet
-                )
+                # UPDATE RPA REMARK HERE FOR FAILED CREATION
+                pass
 
         else:
-            data_volume_bulk_data = {}
+            logger.info("Skipping step type DATA - No creation needed for this Flow")
 
         # =====================Unli SMS/Unli Voice - IN PROV SERVICE, IN ADD WALLET FUP=======================#
         # =====================and IN EXTEND WALLET EXPIRY FLOW SECTION=======================================#
@@ -94,27 +116,39 @@ def start_construct_prepaid(
             "unli sms" in step_flow_construct_value
             or "unli voice" in step_flow_construct_value
         ):
-            # Conditions to execute Step Type IN PROV SERVICE/IN ADD WALLET FUP/IN EXTEND WALLET EXPIRY
-            if double_extend_value == "double":
-                logger.info("Processing IN ADD WALLET FUP")
-                sms_voice_data = st.step_type_in_add_wallet_fup(
-                    double_extend_value, bs_service_id, bs_row_data
-                )
+            try:
+                # Conditions to execute Step Type IN PROV SERVICE/IN ADD WALLET FUP/IN EXTEND WALLET EXPIRY
+                if double_extend_value == "double":
+                    logger.info("Processing IN ADD WALLET FUP")
+                    sms_voice_data = st.step_type_in_add_wallet_fup(
+                        double_extend_value, bs_service_id, bs_row_data
+                    )
+                    dict_step_type_data.update(sms_voice_data)
 
-            elif double_extend_value == "extend":
-                logger.info("Processing IN EXTEND WALLET EXPIRY")
-                sms_voice_data = st.step_type_in_extend_wallet_expiry(
-                    bs_service_id, bs_row_data
-                )
+                elif double_extend_value == "extend":
+                    logger.info("Processing IN EXTEND WALLET EXPIRY")
+                    sms_voice_data = st.step_type_in_extend_wallet_expiry(
+                        bs_service_id, bs_row_data
+                    )
+                    dict_step_type_data.update(sms_voice_data)
 
-            else:
-                # Execute Step Type Process = IN PROV SERVICE - UNLI SMS and/or IN PROV SERVICE - UNLI VOICE
-                logger.info("Processing IN PROV SERVICE")
-                sms_voice_data = st.step_type_in_prov_service(
-                    double_extend_value, bs_service_id, bs_row_data
+                else:
+                    # Execute Step Type Process = IN PROV SERVICE - UNLI SMS and/or IN PROV SERVICE - UNLI VOICE
+                    logger.info("Processing IN PROV SERVICE")
+                    sms_voice_data = st.step_type_in_prov_service(
+                        double_extend_value, bs_service_id, bs_row_data
+                    )
+                    dict_step_type_data.update(sms_voice_data)
+            except TypeError:
+                logger.info(
+                    "Returned object is empty => sms_voice_data, proceed to next step.."
                 )
+                # UPDATE RPA REMARK HERE FOR FAILED CREATION
+                pass
         else:
-            sms_voice_data = {}
+            logger.info(
+                "Skipping step type Unli SMS or VOICE - No creation needed for this Flow"
+            )
 
         # =====================Unli Voice - HLR - PLYF LOW SECTION=======================#
         # Conditions to execute HLR PLY Step Type if there's a Unli Voice in Step and Flow Construct Value
@@ -128,31 +162,36 @@ def start_construct_prepaid(
                 # Execute Step Type Process = HLR PLY
                 logger.info("Processing HLR - PLY")
                 hlr_ply_data = st.step_type_hlr_ply(bs_service_id, bs_row_data)
+                dict_step_type_data.update(hlr_ply_data)
                 dict_incharge_extend_data.update(hlr_ply_data)
 
             else:
-                logger.info("Skipping HLR PLY - No Creation Needed")
-                hlr_ply_data = {}
+                logger.info("Skipping HLR PLY - No creation needed for this Flow")
 
-        except Exception as e:
-            logger.info("HL PLY FAILED - Continue Process..")
+        except TypeError:
+            logger.info(
+                "Returned object is empty => hlr_ply_data, proceed to next step.."
+            )
+            # UPDATE RPA REMARK HERE FOR FAILED CREATION
+            pass
 
         # Add all keys and value to dict_step_type_data dictionary to use later for Flow process
-        logger.info("Merging step data..")
-        dict_step_type_data.update(
-            {
-                **in_charge_data,
-                **extend_first_expiry_data,
-                **data_volume_bulk_data,
-                **sms_voice_data,
-                **hlr_ply_data,
-            }
-        )
-        logger.info(
-            f"Successfully Retreived Step Type Ids and Names: {dict_step_type_data}"
-        )
+        # logger.info("Merging step data..")
+        # dict_step_type_data.update(
+        #     {
+        #         **in_charge_data,
+        #         **extend_first_expiry_data,
+        #         **data_volume_bulk_data,
+        #         **sms_voice_data,
+        #         **hlr_ply_data,
+        #     }
+        # )
+
+        logger.info(f"Successfully Retreived Step Type Data: {dict_step_type_data}")
         logger.info(f"Old Data: {dict_incharge_extend_data}")
 
         return dict_step_type_data, dict_incharge_extend_data
+
     except Exception as e:
-        logger.info(f"Something went wrong on prepaid ctl process\nERROR: {e}")
+        logger.info(f"Something went wrong on prepaid service process\nERROR: {e}")
+        raise

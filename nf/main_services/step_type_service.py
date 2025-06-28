@@ -12,7 +12,7 @@ nf = NfConstants()
 
 
 class StepTypeService:
-    def __init__(self, webdriver, gsheet, url):
+    def __init__(self, webdriver, gsheet, url=None):
         self.wd = webdriver
         self.gs = gsheet
         self.url_step_page = url
@@ -45,266 +45,298 @@ class StepTypeService:
 
     # STEP TYPE 'IN CHARGE' Function to execute process for step type IN CHARGE
     def step_type_in_charge(
-        self, double_extend_value, bs_service_id, bs_row_data, param_worksheet
+        self,
+        double_extend_value,
+        bs_row_data,
+        param_worksheet,
+        retry=1,
+        max_retries=2,
     ):
-        try:
-            # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
+        logger.info("Executing Step Type: IN CHARGE")
+        in_charge_name = (
+            "EXTEND_CHARGE" if double_extend_value.lower() == "extend" else "IN_CHARGE"
+        )
+        while retry < max_retries:
+            try:
+                # Redirect to Add Step Page
+                self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
-            logger.info("Executing Step Type: IN CHARGE")
-            in_charge_name = (
-                "EXTEND_CHARGE"
-                if double_extend_value.lower() == "extend"
-                else "IN_CHARGE"
-            )
-            param_amount = (
-                bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT]
-                if double_extend_value.lower() == "extend"
-                else bs_row_data[nf.NF_INDEX_DEFAULT_AMOUNT]
-            )
+                param_amount = (
+                    bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT]
+                    if double_extend_value.lower() == "extend"
+                    else bs_row_data[nf.NF_INDEX_DEFAULT_AMOUNT]
+                )
 
-            # Call function 'nf_steps_default_input' to fill up default values
-            self.nf_steps_default_input(
-                in_charge_name, "//option[contains(text(), 'IN CHARGE') and @value='2']"
-            )
+                # Call function 'nf_steps_default_input' to fill up default values
+                self.nf_steps_default_input(
+                    in_charge_name,
+                    "//option[contains(text(), 'IN CHARGE') and @value='2']",
+                )
 
-            # Input Amount Field
-            self.wd.perform_action(
-                "name", "param_amt_ccode[0][amount]", "sendkeys", param_amount
-            )
+                # Input Amount Field
+                self.wd.perform_action(
+                    "name", "param_amt_ccode[0][amount]", "sendkeys", param_amount
+                )
 
-            # Get ParamMatrix rows that equals to current Bulk service name
-            param_matrix_pending_rows = self.gs.get_rows_by_name(
-                param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
-            )
+                # Get ParamMatrix rows that equals to current Bulk service name
+                param_matrix_pending_rows = self.gs.get_rows_by_name(
+                    param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
+                )
 
-            if len(param_matrix_pending_rows) != 0 and double_extend_value != "extend":
+                if (
+                    len(param_matrix_pending_rows) != 0
+                    and double_extend_value != "extend"
+                ):
 
-                for index, row in enumerate(param_matrix_pending_rows, 1):
-                    logger.info(
-                        f"Step Type Subfield: Param - Amount - Charge Code = CURRENT ENTRY PARAM{index}"
+                    for index, row in enumerate(param_matrix_pending_rows, 1):
+                        logger.info(
+                            f"Step Type Subfield: Param - Amount - Charge Code = CURRENT ENTRY PARAM{index}"
+                        )
+                        logger.info("Filling up additional Param Values...")
+
+                        # Get ParamMatrix data values via row
+                        row_param_data = param_worksheet.row_values(row)
+
+                        # Click 'Add more Param - Amount - Charge Code' to add new field entry
+                        self.wd.perform_action(
+                            "xpath",
+                            "//a[@onclick='javascript: add_param_amount_chargecode_field();']",
+                            "click",
+                        )
+
+                        # Fill up Param Field
+                        self.wd.perform_action(
+                            "name",
+                            f"param_amt_ccode[{index}][param] type=",
+                            "sendkeys",
+                            row_param_data[nf.INDEX_PARAM_MATRIX_PARAM],
+                        )
+                        # Input Amount Field
+                        self.wd.perform_action(
+                            "name",
+                            f"param_amt_ccode[{index}][amount] type=",
+                            "sendkeys",
+                            row_param_data[nf.INDEX_PARAM_MATRIX_AMOUNT],
+                        )
+                        # Worksheet Update for ParamMatrix - Add BS Service ID Value to ParamMatrix Service ID column
+                        # self.gs.update_row(row, param_worksheet.col_count, param_worksheet, bs_service_id)
+                        logger.info(
+                            f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
+                        )
+
+                # try:
+                #     # Click 'Add' button to submit and wait for the success message element to appear.
+                #     logger.info("Fetching Success Message....")
+                #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+
+                # except (TimeoutException, TimeoutError):
+                #     logger.info(
+                #         "Page took time to load the success message, refreshing page.."
+                #     )
+                #     self.wd.driver.refresh()
+
+                # finally:
+                #     # Call function to handle getting success message element
+                #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+                # Section to get success message after clicking submit button
+                element_value = self.wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                )
+
+                logger.info("STEP TYPE 'IN CHARGE' SUCCESSFULLY DEFINED!")
+
+                # Get Steps unique ID from success message
+                steps_id = helper.get_after_word(element_value, "step")
+                logger.info(f"STEP ID Retrieved: {steps_id} for IN CHARGE")
+
+                # Set Step type result into Dictionary/Object then return
+                dict_step_type_idname = {
+                    "in_charge_id": steps_id,
+                    "in_charge_name": in_charge_name,
+                }
+                logger.info(f"Step type IN CHARGE result: {dict_step_type_idname}")
+                return dict_step_type_idname
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred while processing Step Type IN CHARGE 'step_type_in_charge'\n ERROR: {e}"
                     )
-                    logger.info("Filling up additional Param Values...")
+                    # INSERT GSHEET FAILED RPA REMARKS
+                    break
 
-                    # Get ParamMatrix data values via row
-                    row_param_data = param_worksheet.row_values(row)
-
-                    # Click 'Add more Param - Amount - Charge Code' to add new field entry
-                    self.wd.perform_action(
-                        "xpath",
-                        "//a[@onclick='javascript: add_param_amount_chargecode_field();']",
-                        "click",
-                    )
-
-                    # Fill up Param Field
-                    self.wd.perform_action(
-                        "name",
-                        f"param_amt_ccode[{index}][param] type=",
-                        "sendkeys",
-                        row_param_data[nf.INDEX_PARAM_MATRIX_PARAM],
-                    )
-                    # Input Amount Field
-                    self.wd.perform_action(
-                        "name",
-                        f"param_amt_ccode[{index}][amount] type=",
-                        "sendkeys",
-                        row_param_data[nf.INDEX_PARAM_MATRIX_AMOUNT],
-                    )
-                    # Worksheet Update for ParamMatrix - Add BS Service ID Value to ParamMatrix Service ID column
-                    # self.gs.update_row(row, param_worksheet.col_count, param_worksheet, bs_service_id)
-                    logger.info(
-                        f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
-                    )
-
-            # try:
-            #     # Click 'Add' button to submit and wait for the success message element to appear.
-            #     logger.info("Fetching Success Message....")
-            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-            # except (TimeoutException, TimeoutError):
-            #     logger.info(
-            #         "Page took time to load the success message, refreshing page.."
-            #     )
-            #     self.wd.driver.refresh()
-
-            # finally:
-            #     # Call function to handle getting success message element
-            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
-
-            # Section to get success message after clicking submit button
-            element_value = self.wd.submit_form_and_wait_for_success(
-                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-            )
-
-            logger.info("STEP TYPE 'IN CHARGE' SUCCESSFULLY DEFINED!")
-
-            # Get Steps unique ID from success message
-            steps_id = helper.get_after_word(element_value, "step")
-            logger.info(f"STEP ID Retrieved: {steps_id} for IN CHARGE")
-
-            # Set Step type result into Dictionary/Object then return
-            dict_step_type_idname = {
-                "in_charge_id": steps_id,
-                "in_charge_name": in_charge_name,
-            }
-            logger.info(f"Step type IN CHARGE result: {dict_step_type_idname}")
-            return dict_step_type_idname
-
-        except Exception as e:
-            error_msg = f"An error has occurred while processing Step Type IN CHARGE 'step_type_in_charge'\n ERROR: {e}"
-            logger.info(error_msg)
+                # Trigger continue loop
+                retry += 1
+                logger.warning(f"Failed to create step type IN CHARGE, retrying...")
 
     # STEP TYPE 'EXTENDS FIRST EXPIRY' Function to execute process for step type EXTENDS FIRST EXPIRY
     def step_type_extend_first_expiry(
         self,
         double_extend_value,
-        old_step_id,
         bs_service_id,
         bs_row_data,
         param_worksheet,
+        old_step_id=None,
+        retry=1,
+        max_retries=2,
     ):
-        try:
-            # Section for Extend flow only. No Creation needed, Update existing step and add PARAM
+        while retry < max_retries:
+            try:
+                logger.info("Processing EXTEND FIRST EXPIRY")
+                # Section for Extend flow only. No Creation needed, Update existing step and add PARAM
 
-            if double_extend_value == "extend":
-                try:
-                    extend_data_id_name = self.modify_extend_first_expiry(
-                        old_step_id,
-                        bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT],
-                        bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS],
+                if double_extend_value == "extend":
+                    try:
+                        extend_data_id_name = self.modify_extend_first_expiry(
+                            old_step_id,
+                            bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT],
+                            bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS],
+                        )
+
+                        return extend_data_id_name
+                    except Exception as e:
+                        logger.info(
+                            f"An error has occurred in EXTEND FLOW - EXTEND FIRST EXPIRY\nERROR: {e}"
+                        )
+
+                logger.info("Executing Step Type: EXTEND FIRST EXPIRY")
+                # Redirect to Add Step Page
+                self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
+
+                # Call function 'nf_steps_default_input' to fill up default values
+                self.nf_steps_default_input(
+                    "EXTEND_FIRST_EXPIRY",
+                    "//option[contains(text(), 'EXTEND FIRST EXPIRY') and @value='19']",
+                )
+
+                # Input Amount Field
+                self.wd.perform_action(
+                    "xpath",
+                    "(//input[@name='durations[]'])[1]",
+                    "sendkeys",
+                    bs_row_data[nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS],
+                )
+
+                # Get ParamMatrix rows that equals to current Bulk service name
+                param_matrix_rows = self.gs.get_rows_by_name(
+                    param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
+                )
+                if len(param_matrix_rows) != 0:
+
+                    for index, row in enumerate(param_matrix_rows, 2):
+                        logger.info(
+                            f"Step Type Subfield: Param - Duration = CURRENT ENTRY PARAM{index}"
+                        )
+                        logger.info("Filling up additional Param Values...")
+
+                        # Get ParamMatrix data values via row
+                        row_param_data = param_worksheet.row_values(row)
+
+                        # Click 'Add more Param & Duration' to add new field entry
+                        self.wd.perform_action(
+                            "xpath",
+                            "//a[@onclick='javascript: add_param_duration_field();']",
+                            "click",
+                        )
+
+                        # Fill up Param Field
+                        self.wd.perform_action(
+                            "xpath",
+                            f"(//input[@name='pars[]'])[{index}]",
+                            "sendkeys",
+                            row_param_data[0],
+                        )
+                        # Input Duration Field
+                        self.wd.perform_action(
+                            "xpath",
+                            f"(//input[@name='durations[]'])[{index}]",
+                            "sendkeys",
+                            row_param_data[2],
+                        )
+
+                        # Worksheet Update for ParamMatrix - Add BS Service Id to Param Service Id Column for each row.
+                        self.gs.update_row(
+                            row,
+                            nf.COLUMN_PARAM_MATRIX_SERVICE_ID,
+                            param_worksheet,
+                            bs_service_id,
+                        )
+                        # Worksheet Update for ParamMatrix RPA Remarks.
+                        self.gs.update_row(
+                            row,
+                            nf.COLUMN_PARAM_MATRIX_RPA_REMARKS,
+                            param_worksheet,
+                            "PARAM Successfully Defined",
+                        )
+
+                        logger.info(
+                            f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
+                        )
+                else:
+                    logger.info("Additional Param not Found")
+
+                # try:
+                #     # Click 'Add' button to submit and wait for the success message element to appear.
+                #     logger.info("Fetching Success Message....")
+                #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+
+                # except (TimeoutException, TimeoutError):
+                #     logger.info(
+                #         "Page took time to load the success message, refreshing page.."
+                #     )
+                #     self.wd.driver.refresh()
+
+                # finally:
+                #     # Call function to handle getting success message element
+                #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+
+                # Section to get success message after clicking submit button
+                element_value = self.wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                )
+
+                logger.info("STEPS EXTENDS FIRST EXPIRY SUCCESSFULLY CREATED!")
+
+                # Get Steps unique ID from success message
+                steps_id = helper.get_after_word(element_value, "step")
+                # steps_id = 1021
+                logger.info(f"Retrieved STEPS ID: {steps_id} for EXTENDS FIRST EXPIRY")
+
+                # Set Step type result into Dictionary/Object then return
+                dict_step_type_idname = {
+                    "extend_first_expiry_id": steps_id,
+                    "extend_first_expiry_name": "EXTEND_FIRST_EXPIRY",
+                }
+
+                logger.info(
+                    f"Step EXTENDS FIRST EXPIRY result: {dict_step_type_idname}"
+                )
+                return dict_step_type_idname
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred while processing Step Type EXTENDS FIRST EXPIRY 'nf_steps_extends_first_expiry'\n ERROR: {e}"
                     )
+                    # INSERT GSHEET FAILED RPA REMARKS
+                    break
 
-                    return extend_data_id_name
-                except Exception as e:
-                    logger.info(
-                        f"An error has occurred in EXTEND FLOW - EXTEND FIRST EXPIRY\nERROR: {e}"
-                    )
-
-            logger.info("Executing Step Type: EXTEND FIRST EXPIRY")
-            # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
-
-            # Call function 'nf_steps_default_input' to fill up default values
-            self.nf_steps_default_input(
-                "EXTEND_FIRST_EXPIRY",
-                "//option[contains(text(), 'EXTEND FIRST EXPIRY') and @value='19']",
-            )
-
-            # Input Amount Field
-            self.wd.perform_action(
-                "xpath",
-                "(//input[@name='durations[]'])[1]",
-                "sendkeys",
-                bs_row_data[nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS],
-            )
-
-            # Get ParamMatrix rows that equals to current Bulk service name
-            param_matrix_rows = self.gs.get_rows_by_name(
-                param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
-            )
-            if len(param_matrix_rows) != 0:
-
-                for index, row in enumerate(param_matrix_rows, 2):
-                    logger.info(
-                        f"Step Type Subfield: Param - Duration = CURRENT ENTRY PARAM{index}"
-                    )
-                    logger.info("Filling up additional Param Values...")
-
-                    # Get ParamMatrix data values via row
-                    row_param_data = param_worksheet.row_values(row)
-
-                    # Click 'Add more Param & Duration' to add new field entry
-                    self.wd.perform_action(
-                        "xpath",
-                        "//a[@onclick='javascript: add_param_duration_field();']",
-                        "click",
-                    )
-
-                    # Fill up Param Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='pars[]'])[{index}]",
-                        "sendkeys",
-                        row_param_data[0],
-                    )
-                    # Input Duration Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='durations[]'])[{index}]",
-                        "sendkeys",
-                        row_param_data[2],
-                    )
-
-                    # Worksheet Update for ParamMatrix - Add BS Service Id to Param Service Id Column for each row.
-                    self.gs.update_row(
-                        row,
-                        nf.COLUMN_PARAM_MATRIX_SERVICE_ID,
-                        param_worksheet,
-                        bs_service_id,
-                    )
-                    # Worksheet Update for ParamMatrix RPA Remarks.
-                    self.gs.update_row(
-                        row,
-                        nf.COLUMN_PARAM_MATRIX_RPA_REMARKS,
-                        param_worksheet,
-                        "PARAM Successfully Defined",
-                    )
-
-                    logger.info(
-                        f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
-                    )
-            else:
-                logger.info("Additional Param not Found")
-
-            # try:
-            #     # Click 'Add' button to submit and wait for the success message element to appear.
-            #     logger.info("Fetching Success Message....")
-            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-            # except (TimeoutException, TimeoutError):
-            #     logger.info(
-            #         "Page took time to load the success message, refreshing page.."
-            #     )
-            #     self.wd.driver.refresh()
-
-            # finally:
-            #     # Call function to handle getting success message element
-            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
-
-            # Section to get success message after clicking submit button
-            element_value = self.wd.submit_form_and_wait_for_success(
-                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-            )
-
-            logger.info("STEPS EXTENDS FIRST EXPIRY SUCCESSFULLY CREATED!")
-
-            # Get Steps unique ID from success message
-            steps_id = helper.get_after_word(element_value, "step")
-            # steps_id = 1021
-            logger.info(f"Retrieved STEPS ID: {steps_id} for EXTENDS FIRST EXPIRY")
-
-            # Set Step type result into Dictionary/Object then return
-            dict_step_type_idname = {
-                "extend_first_expiry_id": steps_id,
-                "extend_first_expiry_name": "EXTEND_FIRST_EXPIRY",
-            }
-
-            logger.info(f"Step EXTENDS FIRST EXPIRY result: {dict_step_type_idname}")
-            return dict_step_type_idname
-
-        except Exception as e:
-            logger.info(
-                f"An error has occurred while processing Step Type EXTENDS FIRST EXPIRY 'nf_steps_extends_first_expiry'\n ERROR: {e}"
-            )
-            self.wd.stop_process()
+                # Trigger continue loop
+                retry += 1
+                logger.warning(
+                    f"Failed to create step type EXTEND FIRST EXPIRY, retrying..."
+                )
+                time.sleep(2)
 
     # Function Step Type 'DATA PROV WITH KEYWORD MAPPING' or 'DATA PROV EXTENSION WITH KEYWORD MAPPING' process
     def step_type_data_prov_process(
         self, double_extend_value, bs_service_id, bs_row_data, param_worksheet
     ):
         try:
+            logger.info("PROCESSING DATA PROV PROCESS")
             dict_step_type_idname = {}
 
             # Declare double_flow_true or extend_flow_true with boolean for double and extend flow handling

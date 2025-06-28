@@ -11,7 +11,6 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from requests.exceptions import ReadTimeout
 import time
-import uuid
 
 # logger = logging.getLogger(__name__)
 
@@ -244,7 +243,7 @@ class WebDriver:
                     )
 
             except Exception as e:
-                logger.error(f"Unexpected error on attempt {attempt}: {e}")
+                logger.warning(f"Unexpected error on attempt {attempt}: {e}")
                 self.driver.execute_script("window.stop();")
                 if attempt < max_retries:
                     self.driver.refresh()

@@ -362,9 +362,8 @@ class BulkServices:
         pending_rows = self.gs.get_pending_rows(
             self.worksheets["bulkService"],
             nf.COLUMN_BULK_SERVICE_DEPLOYMENT_DATE,
-            nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
+            nf.BS_INDEX_RPA_REMARKS_BASE_FLOW,
         )
-
         # If there's no deployment date today to work on, terminate script
         if not pending_rows:
             logger.warning("No deployment today to work on, terminating bot...")
