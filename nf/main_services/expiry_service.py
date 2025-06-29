@@ -40,11 +40,11 @@ class ExpiryService:
             # If Default Duration in Days value is No Expiry, choose radio button no expiry, else, multiple by 24
             logger.info("Filling up service expiry fields...")
 
-            logger.info(f"Input Expiry: {int(default_duration_in_days_value) * 24}")
             if "no" in default_duration_in_days_value:
                 self.wd.perform_action("id", "et_2", "click")
             else:
                 # Input Expiry
+                logger.info(f"Input Expiry: {int(default_duration_in_days_value) * 24}")
                 self.wd.perform_action(
                     "id",
                     "expiry",
@@ -52,13 +52,10 @@ class ExpiryService:
                     int(default_duration_in_days_value) * 24,
                 )
 
-                logger.info("Submitting Service Expiry with Default Values...")
                 # Click Add Button
                 self.wd.submit_form_and_wait_for_success(
                     "xpath", nf.NF_ADD_BTN_INPUT, nf.CONTAINS_SUCCESS_MESSAGE, skip=True
                 )
-
-            logger.info("Service Expiry Successfully Created With Default Fields")
 
             # Section to Input Param Matrix Values
             param_matrix_rows = self.gs.get_rows_by_name(
@@ -100,7 +97,6 @@ class ExpiryService:
                         int(param_matrix_data[nf.INDEX_PARAM_MATRIX_DURATION]) * 24,
                     )
                     # Handle after submitting form.. If taking time to load and doesn't need to get the element success message...
-                    logger.info("Submitting Service Expiry with Param Values...")
                     self.wd.submit_form_and_wait_for_success(
                         "xpath",
                         nf.NF_ADD_BTN_INPUT,
@@ -114,22 +110,4 @@ class ExpiryService:
             else:
                 logger.info("No ParamMatrix Found for this Service name.")
         except ExpiryServiceError:
-            raise
-
-    def _click_add_and_wait(self):
-        try:
-            logger.info("Clicking Add button...")
-            self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-            self.wd.wait_until_element("xpath", nf.CONTAINS_SUCCESS_MESSAGE, "visible")
-            logger.info("Service Expiry successfully created.")
-        except TimeoutException:
-            logger.warning(
-                "TimeoutException occurred after clicking Add. Refreshing page..."
-            )
-            self.wd.driver.refresh()
-            raise
-
-        except Exception as e:
-            logger.error(f"Unexpected error occurred: {e}")
-            self.wd.driver.refresh()
             raise

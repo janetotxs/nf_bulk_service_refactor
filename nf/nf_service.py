@@ -3,14 +3,14 @@ from utils.logger import setup_logger, log_traceback, finalize_log_upload
 from utils.google_sheet import GSheetClient
 from utils.web_driver import WebDriver
 from nf.main_services import bulk_service as bs
-from nf.main_services import step_and_flow_construct_service as sf
+from nf.controller import step_and_flow_controller as sf
 
 from utils.logger2 import logger
 from nf.nf_constants import NfConstants
 import datetime
 import time
 from nf.main_services.bulk_service import BulkServices
-from nf.main_services.step_and_flow_construct_service import StepAndFlowConstructService
+from nf.controller.step_and_flow_controller import StepAndFlowController
 
 # Call Constants
 nf = NfConstants()
@@ -32,7 +32,7 @@ class NFService:
         self.gs = GSheetClient()
         self.worksheets = self.gs.create_worksheets(dict_worksheets)
         self.bs = BulkServices(self.worksheets, self.wd, self.gs)
-        self.sf = StepAndFlowConstructService(self.worksheets, self.wd, self.gs)
+        self.sf = StepAndFlowController(self.worksheets, self.wd, self.gs)
 
     # Login Sequence Function.
     def login_sequence(self):
@@ -77,10 +77,10 @@ class NFService:
     def process_sequence(self):
 
         # Start Bulk Services Creation Per Row. After creation done, return all successfully created bulk services ROWS as an array to 'bs_success_rows' array variable
-        bs_success_rows = self.bs.nf_start_bulk_services()
+        bs_success_rows = self.bs.bulk_service_process()
 
         # Start defining Steps, using rows successfully created from Bulk Services.
-        self.sf.start_step_and_flow_construct(bs_success_rows)
+        self.sf.step_and_flow_process(bs_success_rows)
 
     # Clean Up Sequence Function
     def cleanup_sequence(self):

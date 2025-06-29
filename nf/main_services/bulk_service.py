@@ -356,7 +356,7 @@ class BulkServices:
             raise
 
     # Orchestrator of bulk service file
-    def nf_start_bulk_services(self):
+    def bulk_service_process(self):
 
         # Fetch current deployment date rows
         pending_rows = self.gs.get_pending_rows(
@@ -383,16 +383,19 @@ class BulkServices:
                 self.gs.update_row(row, 1, self.worksheets["bulkService"], service_id)
                 self.gs.update_row(
                     row,
-                    self.worksheets["bulkService"].col_count,
+                    nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
                     self.worksheets["bulkService"],
-                    "Bulk Services Created, in progress defining of steps and flows",
+                    "Success",
                 )
                 self.list_service_id.append(service_id)
 
             except BulkServiceError as e:
                 logger.error(f"Row {row}: Bulk service failed: {e}")
                 self.gs.update_rpa_remarks_error(
-                    row, str(e), self.worksheets["bulkService"]
+                    row,
+                    nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
+                    str(e),
+                    self.worksheets["bulkService"],
                 )
 
             except ExpiryServiceError as e:

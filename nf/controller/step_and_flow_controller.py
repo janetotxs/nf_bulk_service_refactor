@@ -1,7 +1,8 @@
 from utils.logger import setup_logger
 from utils.env_loader import get_env_variable
 from utils.logger2 import logger
-from nf.prepaid_services import prepaid_service as pctl
+from utils import helpers as helper
+from nf.prepaid_services.prepaid_service import PrepaidService
 from nf.main_services.flow_service import FlowService
 from nf.main_services import keyword_service as key
 from nf.main_services import extension_expiry_service as ees
@@ -15,17 +16,19 @@ from nf.main_services import message_service as ms
 nf = NfConstants()
 
 
-class StepAndFlowConstructService:
+class StepAndFlowController:
     def __init__(self, worksheets, webdriver, gsheet):
         self.wd = webdriver
         self.gs = gsheet
         self.worksheets = worksheets
-        self.flow = FlowService(worksheets, webdriver, gsheet)
         self.old_step_type_data = {}
         self.old_extend_step_id = None
+        self.flow = FlowService(worksheets, webdriver, gsheet)
+        self.ps = PrepaidService(webdriver, gsheet, worksheets)
+        self.rpa_remark_aux_fail = {}
 
     # Function to start Steps service loop using BS successfully created rows/row
-    def start_step_and_flow_construct(self, bs_success_rows):
+    def step_and_flow_process(self, bs_success_rows):
         logger.info("STARTING STEP SERVICE")
 
         # Section to start loop for all bulk services that are successfully created using array rows for loop
@@ -127,16 +130,48 @@ class StepAndFlowConstructService:
                             row,
                         )
 
+                        # Start Keyword Process
+                        keyword_fail_remark = key.create_keyword(
+                            bs_service_id,
+                            bs_row_data,
+                            self.wd,
+                            double_extend_key,
+                        )
+                        # Convert keyword fail remark from dict to string
+                        rpa_remark_keyword_string = helper.convert_string_hashmap(
+                            keyword_fail_remark, "string"
+                        )
+                        rpa_remark_keyword_final = (
+                            rpa_remark_keyword_string
+                            if keyword_fail_remark
+                            else "Success"
+                        )
+                        self.gs.update_row(
+                            row,
+                            nf.COLUMN_BULK_SERVICE_RPA_REMARKS_KEYWORD,
+                            self.worksheets["bulkService"],
+                            rpa_remark_keyword_final,
+                        )
+
                         #### EXTEND FLOW - CREATE KEYWORD AND EXTENSION EXPIRY ####
                         if double_extend_key == "extend":
-                            # Start Keyword Process (For Extend Flow only)
-                            key.create_keyword(
-                                bs_service_id, bs_row_data, self.wd, double_extend_key
-                            )
                             # Start Extension Expiry Service
                             ees.create_extension_expiry(
                                 bs_service_id, bs_row_data, self.wd
                             )
+                    else:
+                        # Update RPA Logic Flow to Skip
+                        column_flow = (
+                            nf.COLUMN_BULK_SERVICE_RPA_REMARKS_DOUBLE_FLOW
+                            if double_extend_key == "double"
+                            else nf.COLUMN_BULK_SERVICE_RPA_REMARKS_EXTEND_FLOW
+                        )
+                        self.gs.update_row(
+                            row,
+                            column_flow,
+                            self.worksheets["bulkService"],
+                            "No Creation Needed",
+                        )
 
                 # Start Defining Gyro Command
                 if not bs_row_data[nf.BS_INDEX_GYRO_COMMAND]:
@@ -146,33 +181,24 @@ class StepAndFlowConstructService:
                         bs_row_data[nf.BS_INDEX_GYRO_COMMAND], bs_service_id, self.wd
                     )
 
-                    # Update RPA Remarks when Gyro Success
-                    bs_row_data_updated_1 = self.worksheets["bulkService"].row_values(
-                        row
-                    )
-                    rpa_remarks_gyro = f"{bs_row_data_updated_1[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]} | GYRO: Success"
-                    self.gs.update_row(
-                        row,
-                        nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
-                        self.worksheets["bulkService"],
-                        rpa_remarks_gyro,
-                    )
-
                 # Start Defining Current Bulk Service in Simple Service Group DATA BAL
                 if bs_row_data[nf.NF_INDEX_GROUP_STATUS_INQUIRY].lower() == "yes":
-                    bs_row_data_updated_2 = self.worksheets["bulkService"].row_values(
-                        row
-                    )
-                    ssg.define_bs_simple_service_group(bs_service_id, self.wd)
 
-                    # Update RPA Remarks when Simple Service Group Success
-                    rpa_remarks_ssg = f"{bs_row_data_updated_2[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]} | SIMPLE SERVICE GROUP: Success"
-                    self.gs.update_row(
-                        row,
-                        nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
-                        self.worksheets["bulkService"],
-                        rpa_remarks_ssg,
+                    rpa_remark_ssg = ssg.define_bs_simple_service_group(
+                        bs_service_id, self.wd
                     )
+
+                    if rpa_remark_ssg:
+                        self.rpa_remark_aux_fail.update(rpa_remark_ssg)
+
+                    # # Update RPA Remarks when Simple Service Group Success
+                    # rpa_remarks_ssg = f"{bs_row_data_updated_2[nf.BS_INDEX_RPA_REMARKS_BULK_SERVICE]} | SIMPLE SERVICE GROUP: Success"
+                    # self.gs.update_row(
+                    #     row,
+                    #     nf.COLUMN_BULK_SERVICE_RPA_REMARKS,
+                    #     self.worksheets["bulkService"],
+                    #     rpa_remarks_ssg,
+                    # )
                 try:
                     # Update Gsheet by inserting bulk service id to gsheet tab 'Message' service id column
                     logger.info("Inserting Bulk Service Id to 'Messages' worksheet..")
@@ -206,20 +232,37 @@ class StepAndFlowConstructService:
                     else:
                         logger.info("No 'Messages' row to update..")
 
-                    # Start Defining Messages and Reminder Messages
-                    ms.create_message(self.wd, self.gs)
-
                 except Exception as e:
                     error_msg = f"An error has occurred while updating 'Messages' sheet tab\n ERROR: {e}"
                     logger.info(error_msg)
-                    raise
+
+                # Start Defining Messages and Reminder Messages
+                logger.info("Updating RPA Remark Aux..")
+                message_fail = ms.create_message(self.wd, self.gs)
+                print(f"check message_fail: {message_fail}")
+                if message_fail:
+                    self.rpa_remark_aux_fail["MESSAGE"] = "Failed"
+
+                # Convert Aux fail remark from dict to string
+                rpa_remark_aux_string = helper.convert_string_hashmap(
+                    self.rpa_remark_aux_fail, "string"
+                )
+                print(f"check string: {rpa_remark_aux_string}")
+                rpa_remark_aux_final = (
+                    rpa_remark_aux_string if self.rpa_remark_aux_fail else "Success"
+                )
+                print(rpa_remark_aux_final)
+                # Update RPA Remark AUX
+                self.gs.update_row(
+                    row,
+                    nf.COLUMN_BULK_SERVICE_RPA_REMARKS_AUX_FLOW,
+                    self.worksheets["bulkService"],
+                    rpa_remark_aux_final,
+                )
 
             except Exception as e:
-                error_msg = f"An error has occurred on 'start_nf_service_steps' function\n ERROR: {e}"
+                error_msg = f"An error has occurred on 'step_and_flow_process' function\n ERROR: {e}"
                 logger.info(error_msg)
-                self.gs.update_rpa_remarks_error(
-                    row, error_msg, self.worksheets["bulkService"]
-                )
                 continue
 
     # Funcion to handle/to determine what step and flow construct to execute
@@ -244,14 +287,13 @@ class StepAndFlowConstructService:
 
             # Calling function to execute step type services for Prepaid CTL
             if "prepaid" in step_and_flow_construct_value:
-                step_type_data, incharge_extend_data = pctl.start_construct_prepaid(
+                step_type_data, incharge_extend_data = self.ps.start_prepaid_process(
                     double_extend_value,
                     self.old_extend_step_id,
                     bs_service_id,
                     bs_row_data,
                     self.worksheets["paramMatrix"],
-                    self.wd,
-                    self.gs,
+                    row,
                 )
 
                 return step_type_data, incharge_extend_data
@@ -313,4 +355,4 @@ class StepAndFlowConstructService:
             logger.info(
                 f"An error has occurred while defining gyro command\nERROR: {e}"
             )
-            raise
+            self.rpa_remark_aux_fail["GYRO"] = "Failed"

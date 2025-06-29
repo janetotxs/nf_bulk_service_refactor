@@ -24,36 +24,31 @@ nf = NfConstants()
 
 
 def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
-    try:
-        logger.info("STARTING EXTEND KEYWORD PROCESS")
-        # Declare Keyword value and Operation
-        # list_keywords = []
-        url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
-        provision_keyword_value = bs_row_data[nf.BS_INDEX_PROVISION_KEYWORD]
-        deprovision_keyword_value = bs_row_data[nf.BS_INDEX_DEPROVISION_KEYWORD]
-        status_keyword_value = bs_row_data[nf.BS_INDEX_STATUS_KEYWORD]
-        extend_keyword_value = bs_row_data[nf.BS_INDEX_EXTEND_KEYWORD]
-        # list_keywords.append(provision_keyword_value)
-        # list_keywords.append(deprovision_keyword_value)
-        # list_keywords.append(status_keyword_value)
-        # list_keywords.append(extend_keyword_value)
+    logger.info("STARTING EXTEND KEYWORD PROCESS")
+    # Declare Keyword value and Operation
+    url = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=service_keywords&op=add&details_id={bs_service_id}"
+    provision_keyword_value = bs_row_data[nf.BS_INDEX_PROVISION_KEYWORD]
+    deprovision_keyword_value = bs_row_data[nf.BS_INDEX_DEPROVISION_KEYWORD]
+    status_keyword_value = bs_row_data[nf.BS_INDEX_STATUS_KEYWORD]
+    extend_keyword_value = bs_row_data[nf.BS_INDEX_EXTEND_KEYWORD]
 
-        keyword_conditions = {
-            "Provision": True if provision_keyword_value else False,
-            "Deprovision": True if deprovision_keyword_value else False,
-            "Status": True if status_keyword_value else False,
-            "Extend": (
-                True
-                if extend_keyword_value and double_extend_value == "extend"
-                else False
-            ),
-        }
+    keyword_conditions = {
+        "Provision": True if provision_keyword_value else False,
+        "Deprovision": True if deprovision_keyword_value else False,
+        "Status": True if status_keyword_value else False,
+        "Extend": (
+            True if extend_keyword_value and double_extend_value == "extend" else False
+        ),
+    }
 
-        # Start Loop for each keyword that is set to True
-        for keyword_key, keyword_true in keyword_conditions.items():
+    # Start Loop for each keyword that is set to True
+    fail_remark = {}
+
+    for keyword_key, keyword_true in keyword_conditions.items():
+        try:
             if keyword_true:
 
-                logger.info(f"Current Loop: {keyword_key}")
+                logger.info(f"Creating Keyword: {keyword_key}")
                 # Get keyword value and operiations by calling function get_keyword_operation
                 keyword_value, selected_keyword_operation = get_keyword_operation(
                     keyword_key.lower(),
@@ -77,22 +72,33 @@ def create_keyword(bs_service_id, bs_row_data, wd, double_extend_value=None):
                 wd.perform_action("xpath", selected_keyword_operation, "click")
 
                 # Input Regex Field
+                logger.info(f"Input Regex: {keyword_value}")
                 wd.perform_action(
                     "name", nf.KEYWORD_REGEX_INPUT, "sendkeys", keyword_value
                 )
                 # Click Submit Button
                 wd.submit_form_and_wait_for_success(
-                    "xpath", nf.NF_ADD_BTN_INPUT, nf.CONTAINS_SUCCESS_MESSAGE, skip=True
+                    "xpath",
+                    nf.NF_ADD_BTN_INPUT,
+                    nf.CONTAINS_SUCCESS_MESSAGE,
+                    skip=True,
                 )
 
                 logger.info(
                     f"Service Keyword Successfully Created for {keyword_key.upper()}"
                 )
 
-    except (TimeoutError, TimeoutException):
-        logger.info("Page time out!, stopping page from loading...")
-        wd.driver.execute_script("window.stop();")
-        raise
+            else:
+                logger.info("No Keyword Operation Input, will proceed to next step")
+
+        except Exception as e:
+            logger.warning(
+                f"Failed to create keyword operation {keyword_key} \nERROR: {e}"
+            )
+            fail_remark[keyword_key] = "Failed"
+            continue
+
+    return fail_remark
 
 
 def get_keyword_operation(

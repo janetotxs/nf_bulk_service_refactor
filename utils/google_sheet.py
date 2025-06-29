@@ -1,11 +1,10 @@
 import gspread
-import logging
-from utils.logger2 import logger
 import datetime
 from google.oauth2.service_account import Credentials
 from typing import List, Dict, Any
 from utils.env_loader import get_env_variable
 from nf.nf_constants import NfConstants
+from utils.logger2 import logger
 
 # logger = logging.getLogger(__name__)
 
@@ -69,13 +68,28 @@ class GSheetClient:
                 row_data = worksheet.row_values(cell.row)
                 # print(row_data)
 
-                for i in range(column_rpa_start, len(row_data)):
-                    logger.info(f"{row_data[i]} = index {i}")
-                    if expected_status in row_data[i].lower():
+                # Check each RPA remark columns if there's a failed status (this is for NF Fallback process)
+                if expected_status == "failed":
+                    for i in range(column_rpa_start, len(row_data)):
+                        logger.info(f"{row_data[i]} = index {i}")
+                        if expected_status in row_data[i].lower():
+                            result.append(cell.row)
+                            logger.info(f"Fallback Row Added: {cell.row}")
+                            break
+                # Check if there's an existing value on specific cell (this is for NF Deployment process)
+                else:
+                    remark_value = worksheet.cell(cell.row, column_rpa_start).value
+                    # print(str(data.row) + " = " + data_value)
+                    if remark_value:
+                        remark_value_final = remark_value.lower()
+                    else:
+                        remark_value_final = ""
+                    # print(data_value)
+                    if not remark_value_final or not "success" in remark_value_final:
                         result.append(cell.row)
                         logger.info(f"Pending Row Added: {cell.row}")
-                        break
-            # print(result)
+
+            logger.info(result)
             return result
 
         except Exception as e:
@@ -110,23 +124,17 @@ class GSheetClient:
             logger.info(f"An error has occurred while fetching rows..\nERROR:{e}")
 
     # Function to Update a specific row via row and column coordinates
-    def update_row(self, row, column, worksheet, value):
-        try:
-            logger.info(f"{worksheet}: Updating Cell...")
-            # Update cell using 'value'
-            worksheet.update_cell(row, column, value)
-
-        except Exception as e:
-            logger.info(
-                f"Unexpected error has occurred while updating cell. ERROR: {e}"
-            )
+    def update_row(self, row: int, column: int, worksheet, value: str):
+        logger.info(f"{worksheet}: Updating Cell..")
+        # Update cell using 'value'
+        worksheet.update_cell(row, column, value)
 
     # Function to update RPA remarks for error message based on exception
-    def update_rpa_remarks_error(self, row, error_msg, worksheet):
+    def update_rpa_remarks_error(self, row, column, error_msg, worksheet):
         try:
             # Update remarks failed process
             error_message = f"Failed | {error_msg}"
-            worksheet.update_cell(row, worksheet.col_count, error_message)
+            worksheet.update_cell(row, column, error_message)
 
         except Exception as e:
             logger.info(
@@ -135,27 +143,21 @@ class GSheetClient:
 
     # Get row data for ParamMatrix worksheet
     def get_rows_by_name(self, worksheet, name_to_find):
-        try:
-            logger.info(f"Fetching Rows that matches: '{name_to_find}'")
+        logger.info(f"Fetching rows using service name: '{name_to_find}'")
 
-            # find all cells that matches the name_to_find value
-            current_cells = worksheet.findall(name_to_find)
+        # find all cells that matches the name_to_find value
+        current_cells = worksheet.findall(name_to_find)
 
-            result = []
-            if len(current_cells) != 0:
-                for cell in current_cells:
-                    logger.info(f"Row Fetched: {cell.row}")
-                    result.append(cell.row)
-            else:
-                logger.info(
-                    f"The bot was unable to find a service name that matches: '{name_to_find}'"
-                )
-                return []
-
-            logger.info(f"Rows Successfully Fetched: {result}")
-            return result
-
-        except Exception as e:
+        result = []
+        if len(current_cells) != 0:
+            for cell in current_cells:
+                logger.info(f"Row Fetched: {cell.row}")
+                result.append(cell.row)
+        else:
             logger.info(
-                f"An error has occurred on function 'get_rows_by_name'\nERROR:{e}"
+                f"The bot was unable to find service name that matches with: '{name_to_find}'"
             )
+            return []
+
+        logger.info(f"Rows successfully fetched: {result}")
+        return result

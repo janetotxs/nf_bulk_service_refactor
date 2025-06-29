@@ -12,10 +12,24 @@
 # new_remark = " | ".join(f"{key}: {value}" for key, value in hashmap.items())
 # print(new_remark)
 
-test = None
-dicts = {}
+from test2 import Test2
+from utils import helpers
 
-dicts.update(test)
+damn = {}
+t = Test2()
+try:
+    test = t.run()
+except Exception:
+    print("GOT ERROR")
+pot = helpers.convert_string_hashmap(damn, "string")
+print(pot)
+print("LAGPA")
+damn.update(test)
+if pot:
+    print("SADASD")
+if t.rows:
+    print("PASS")
+
 # def loop():
 #     retry = 1
 #     max_retries = 2

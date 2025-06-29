@@ -12,60 +12,96 @@ nf = NfConstants()
 
 
 class StepTypeService:
-    def __init__(self, webdriver, gsheet, url=None):
+    def __init__(self, webdriver, gsheet, worksheets):
         self.wd = webdriver
         self.gs = gsheet
-        self.url_step_page = url
+        self.worksheets = worksheets
+        self.row = None
+        self.double_extend_value = None
+        self.bs_row_data = None
+        self.rpa_column = None
+        self.url_step_page = None
+        self.param_rows = []
+        self.bs_rpa_remark_fail = {}
+        self.param_rpa_remark_fail = {}
+
+    # Function to setup the reusable variables
+    def initial_setup(self, row, double_extend_value, bs_row_data, bs_service_id):
+        logger.info("Initializing Step Service..")
+        self.row = row
+        self.double_extend_value = double_extend_value
+        self.bs_row_data = bs_row_data
+        self.url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
+        self.rpa_column = (
+            nf.COLUMN_BULK_SERVICE_RPA_REMARKS_EXTEND_FLOW
+            if double_extend_value == "extend"
+            else (
+                nf.COLUMN_BULK_SERVICE_RPA_REMARKS_DOUBLE_FLOW
+                if double_extend_value == "double"
+                else nf.BS_INDEX_RPA_REMARKS_BASE_FLOW
+            )
+        )
+        # Get ParamMatrix rows that equals to current Bulk service name
+        logger.info(
+            f"Checking for ParamMatrix Values For this Service Name: {bs_row_data[nf.NF_INDEX_NAME]}"
+        )
+        self.param_rows = self.gs.get_rows_by_name(
+            self.worksheets["paramMatrix"], bs_row_data[nf.NF_INDEX_NAME]
+        )
+        logger.info("Step Service Initialized.")
 
     # Function to enter default values to inputs
     def nf_steps_default_input(
         self, name_value, steps_type_element, final_value=None, sms_voice=None
     ):
         try:
-            logger.info("Filling up step type default fields...")
+            logger.info("Filling up step fields...")
             # Input Name Field
+            logger.info(f"Input Name: {name_value}")
             self.wd.perform_action("xpath", nf.NF_INPUT_NAME, "sendkeys", name_value)
 
             # Select Bulk Service Dropdown DEFAULT = Current Bulk Service/Service ID
+            logger.info(f"Select Step Type: {steps_type_element}")
             self.wd.perform_action("xpath", steps_type_element, "click")
 
             # Checkbox Final Field
             if sms_voice:
                 if "voice" in sms_voice:
+                    logger.info(f"Checkbox Final: Checked")
                     self.wd.perform_action("name", nf.NF_STEPS_FINAL_CHECKBOX, "click")
 
             # Input Retry Field
+            logger.info(f"Input Retry: 3")
             self.wd.perform_action("name", nf.NF_STEPS_RETRY_INPUT, "sendkeys", 3)
-            logger.info("Done filling up step type default fields")
+
         except Exception as e:
             logger.info(
                 f"An error has occurred while entering default values. Function 'nf_steps_default_input'\nERROR: {e}"
             )
-            self.wd.stop_process()
 
     # STEP TYPE 'IN CHARGE' Function to execute process for step type IN CHARGE
     def step_type_in_charge(
         self,
-        double_extend_value,
-        bs_row_data,
         param_worksheet,
         retry=1,
         max_retries=2,
     ):
         logger.info("Executing Step Type: IN CHARGE")
         in_charge_name = (
-            "EXTEND_CHARGE" if double_extend_value.lower() == "extend" else "IN_CHARGE"
+            "EXTEND_CHARGE"
+            if self.double_extend_value.lower() == "extend"
+            else "IN_CHARGE"
         )
-        while retry < max_retries:
+        while retry < max_retries + 1:
             try:
                 # Redirect to Add Step Page
                 self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
                 # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
                 param_amount = (
-                    bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT]
-                    if double_extend_value.lower() == "extend"
-                    else bs_row_data[nf.NF_INDEX_DEFAULT_AMOUNT]
+                    self.bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT]
+                    if self.double_extend_value.lower() == "extend"
+                    else self.bs_row_data[nf.NF_INDEX_DEFAULT_AMOUNT]
                 )
 
                 # Call function 'nf_steps_default_input' to fill up default values
@@ -75,70 +111,58 @@ class StepTypeService:
                 )
 
                 # Input Amount Field
+                logger.info("Input Param: DEFAULT")
+                logger.info(f"Input Amount: {param_amount}")
                 self.wd.perform_action(
                     "name", "param_amt_ccode[0][amount]", "sendkeys", param_amount
                 )
 
-                # Get ParamMatrix rows that equals to current Bulk service name
-                param_matrix_pending_rows = self.gs.get_rows_by_name(
-                    param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
-                )
+                if len(self.param_rows) != 0 and self.double_extend_value != "extend":
+                    logger.info(
+                        "Filling up step type sub fields using ParamMatrix values.."
+                    )
+                    for index, row in enumerate(self.param_rows, 1):
+                        try:
+                            # Get ParamMatrix data values via row
+                            row_param_data = param_worksheet.row_values(row)
+                            logger.info(f"Param Row: {row}")
+                            # Click 'Add more Param - Amount - Charge Code' to add new field entry
+                            self.wd.perform_action(
+                                "xpath",
+                                "//a[@onclick='javascript: add_param_amount_chargecode_field();']",
+                                "click",
+                            )
 
-                if (
-                    len(param_matrix_pending_rows) != 0
-                    and double_extend_value != "extend"
-                ):
-
-                    for index, row in enumerate(param_matrix_pending_rows, 1):
-                        logger.info(
-                            f"Step Type Subfield: Param - Amount - Charge Code = CURRENT ENTRY PARAM{index}"
-                        )
-                        logger.info("Filling up additional Param Values...")
-
-                        # Get ParamMatrix data values via row
-                        row_param_data = param_worksheet.row_values(row)
-
-                        # Click 'Add more Param - Amount - Charge Code' to add new field entry
-                        self.wd.perform_action(
-                            "xpath",
-                            "//a[@onclick='javascript: add_param_amount_chargecode_field();']",
-                            "click",
-                        )
-
-                        # Fill up Param Field
-                        self.wd.perform_action(
-                            "name",
-                            f"param_amt_ccode[{index}][param] type=",
-                            "sendkeys",
-                            row_param_data[nf.INDEX_PARAM_MATRIX_PARAM],
-                        )
-                        # Input Amount Field
-                        self.wd.perform_action(
-                            "name",
-                            f"param_amt_ccode[{index}][amount] type=",
-                            "sendkeys",
-                            row_param_data[nf.INDEX_PARAM_MATRIX_AMOUNT],
-                        )
-                        # Worksheet Update for ParamMatrix - Add BS Service ID Value to ParamMatrix Service ID column
-                        # self.gs.update_row(row, param_worksheet.col_count, param_worksheet, bs_service_id)
-                        logger.info(
-                            f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
-                        )
-
-                # try:
-                #     # Click 'Add' button to submit and wait for the success message element to appear.
-                #     logger.info("Fetching Success Message....")
-                #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-                # except (TimeoutException, TimeoutError):
-                #     logger.info(
-                #         "Page took time to load the success message, refreshing page.."
-                #     )
-                #     self.wd.driver.refresh()
-
-                # finally:
-                #     # Call function to handle getting success message element
-                #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+                            # Fill up Param Field
+                            logger.info(
+                                f"Input Param: {row_param_data[nf.INDEX_PARAM_MATRIX_PARAM]}"
+                            )
+                            self.wd.perform_action(
+                                "name",
+                                f"param_amt_ccode[{index}][param] type=",
+                                "sendkeys",
+                                row_param_data[nf.INDEX_PARAM_MATRIX_PARAM],
+                            )
+                            # Input Amount Field
+                            logger.info(
+                                f"Input Amount: {row_param_data[nf.INDEX_PARAM_MATRIX_AMOUNT]}"
+                            )
+                            self.wd.perform_action(
+                                "name",
+                                f"param_amt_ccode[{index}][amount] type=",
+                                "sendkeys",
+                                row_param_data[nf.INDEX_PARAM_MATRIX_AMOUNT],
+                            )
+                        except Exception as e:
+                            logger.info(
+                                f"An error has occurred while using paramMatrix values, will continue to next step.."
+                            )
+                            # Store ParamMatrix RPA Remark Failed in hashmap
+                            self.param_rpa_remark_fail[in_charge_name] = "Failed"
+                else:
+                    logger.info(
+                        f"No ParamMatrix found for this service name {self.bs_row_data[nf.NF_INDEX_NAME]}, will proceed to next step.."
+                    )
 
                 # Section to get success message after clicking submit button
                 element_value = self.wd.submit_form_and_wait_for_success(
@@ -164,7 +188,8 @@ class StepTypeService:
                     logger.error(
                         f"An error has occurred while processing Step Type IN CHARGE 'step_type_in_charge'\n ERROR: {e}"
                     )
-                    # INSERT GSHEET FAILED RPA REMARKS
+                    # Store RPA Remark failed to hashmap
+                    self.bs_rpa_remark_fail[in_charge_name] = "Failed"
                     break
 
                 # Trigger continue loop
@@ -174,25 +199,21 @@ class StepTypeService:
     # STEP TYPE 'EXTENDS FIRST EXPIRY' Function to execute process for step type EXTENDS FIRST EXPIRY
     def step_type_extend_first_expiry(
         self,
-        double_extend_value,
         bs_service_id,
-        bs_row_data,
         param_worksheet,
         old_step_id=None,
         retry=1,
         max_retries=2,
     ):
-        while retry < max_retries:
+        while retry < max_retries + 1:
             try:
-                logger.info("Processing EXTEND FIRST EXPIRY")
                 # Section for Extend flow only. No Creation needed, Update existing step and add PARAM
-
-                if double_extend_value == "extend":
+                if self.double_extend_value == "extend":
                     try:
                         extend_data_id_name = self.modify_extend_first_expiry(
                             old_step_id,
-                            bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT],
-                            bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS],
+                            self.bs_row_data[nf.NF_INDEX_EXTEND_AMOUNT],
+                            self.bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS],
                         )
 
                         return extend_data_id_name
@@ -212,86 +233,81 @@ class StepTypeService:
                     "//option[contains(text(), 'EXTEND FIRST EXPIRY') and @value='19']",
                 )
 
-                # Input Amount Field
+                # Input Default Amount Field
+                logger.info(f"Input Default Param: DEFAULT")
+                logger.info(
+                    f"Input Default Durations: {self.bs_row_data[nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS]} (days)"
+                )
                 self.wd.perform_action(
                     "xpath",
                     "(//input[@name='durations[]'])[1]",
                     "sendkeys",
-                    bs_row_data[nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS],
+                    self.bs_row_data[nf.NF_INDEX_DEFAULT_DURATION_IN_DAYS],
                 )
 
-                # Get ParamMatrix rows that equals to current Bulk service name
-                param_matrix_rows = self.gs.get_rows_by_name(
-                    param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
-                )
-                if len(param_matrix_rows) != 0:
+                if len(self.param_rows) != 0:
+                    logger.info(
+                        "Filling up step type sub fields using ParamMatrix values.."
+                    )
+                    try:
+                        for index, row in enumerate(self.param_rows, 2):
+                            # Get ParamMatrix data values via row
+                            row_param_data = param_worksheet.row_values(row)
+                            logger.info(
+                                f"Param Row: {row} - {index} - data: {row_param_data}"
+                            )
+                            # Click 'Add more Param & Duration' to add new field entry
+                            self.wd.perform_action(
+                                "xpath",
+                                "//a[@onclick='javascript: add_param_duration_field();']",
+                                "click",
+                            )
 
-                    for index, row in enumerate(param_matrix_rows, 2):
+                            # Fill up Param Field
+                            # Input Amount Field
+                            logger.info(
+                                f"Input Param: {row_param_data[nf.NF_PARAMMATRIX_INDEX_PARAM]}"
+                            )
+                            self.wd.perform_action(
+                                "xpath",
+                                f"(//input[@name='pars[]'])[{index}]",
+                                "sendkeys",
+                                row_param_data[nf.NF_PARAMMATRIX_INDEX_PARAM],
+                            )
+                            # Input Duration Field
+                            logger.info(
+                                f"Input Duration: {row_param_data[nf.NF_PARAMMATRIX_INDEX_DURATION_IN_DAYS]} (days)"
+                            )
+                            self.wd.perform_action(
+                                "xpath",
+                                f"(//input[@name='durations[]'])[{index}]",
+                                "sendkeys",
+                                row_param_data[
+                                    nf.NF_PARAMMATRIX_INDEX_DURATION_IN_DAYS
+                                ],
+                            )
+
+                            # Worksheet Update for ParamMatrix - Add BS Service Id to Param Service Id Column for each row.
+                            self.gs.update_row(
+                                row,
+                                nf.COLUMN_PARAM_MATRIX_SERVICE_ID,
+                                param_worksheet,
+                                bs_service_id,
+                            )
+
+                            logger.info(
+                                f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
+                            )
+                    except Exception as e:
                         logger.info(
-                            f"Step Type Subfield: Param - Duration = CURRENT ENTRY PARAM{index}"
+                            f"An error has occurred while using paramMatrix values, will continue to next step..\nERROR {e}"
                         )
-                        logger.info("Filling up additional Param Values...")
-
-                        # Get ParamMatrix data values via row
-                        row_param_data = param_worksheet.row_values(row)
-
-                        # Click 'Add more Param & Duration' to add new field entry
-                        self.wd.perform_action(
-                            "xpath",
-                            "//a[@onclick='javascript: add_param_duration_field();']",
-                            "click",
-                        )
-
-                        # Fill up Param Field
-                        self.wd.perform_action(
-                            "xpath",
-                            f"(//input[@name='pars[]'])[{index}]",
-                            "sendkeys",
-                            row_param_data[0],
-                        )
-                        # Input Duration Field
-                        self.wd.perform_action(
-                            "xpath",
-                            f"(//input[@name='durations[]'])[{index}]",
-                            "sendkeys",
-                            row_param_data[2],
-                        )
-
-                        # Worksheet Update for ParamMatrix - Add BS Service Id to Param Service Id Column for each row.
-                        self.gs.update_row(
-                            row,
-                            nf.COLUMN_PARAM_MATRIX_SERVICE_ID,
-                            param_worksheet,
-                            bs_service_id,
-                        )
-                        # Worksheet Update for ParamMatrix RPA Remarks.
-                        self.gs.update_row(
-                            row,
-                            nf.COLUMN_PARAM_MATRIX_RPA_REMARKS,
-                            param_worksheet,
-                            "PARAM Successfully Defined",
-                        )
-
-                        logger.info(
-                            f"Worksheet Updated: {param_worksheet} Row Updated: {row}"
-                        )
+                        # store paramMatrix RPA Remark failed to hashmap
+                        self.param_rpa_remark_fail["EXTEND_FIRST_EXPIRY"] = "Failed"
                 else:
-                    logger.info("Additional Param not Found")
-
-                # try:
-                #     # Click 'Add' button to submit and wait for the success message element to appear.
-                #     logger.info("Fetching Success Message....")
-                #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-                # except (TimeoutException, TimeoutError):
-                #     logger.info(
-                #         "Page took time to load the success message, refreshing page.."
-                #     )
-                #     self.wd.driver.refresh()
-
-                # finally:
-                #     # Call function to handle getting success message element
-                #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
+                    logger.info(
+                        f"No ParamMatrix found for this service name {self.bs_row_data[nf.NF_INDEX_NAME]}, will proceed to next step.."
+                    )
 
                 # Section to get success message after clicking submit button
                 element_value = self.wd.submit_form_and_wait_for_success(
@@ -321,7 +337,8 @@ class StepTypeService:
                     logger.error(
                         f"An error has occurred while processing Step Type EXTENDS FIRST EXPIRY 'nf_steps_extends_first_expiry'\n ERROR: {e}"
                     )
-                    # INSERT GSHEET FAILED RPA REMARKS
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail["EXTEND_FIRST_EXPIRY"] = "Failed"
                     break
 
                 # Trigger continue loop
@@ -333,496 +350,523 @@ class StepTypeService:
 
     # Function Step Type 'DATA PROV WITH KEYWORD MAPPING' or 'DATA PROV EXTENSION WITH KEYWORD MAPPING' process
     def step_type_data_prov_process(
-        self, double_extend_value, bs_service_id, bs_row_data, param_worksheet
+        self,
+        bs_service_id,
+        param_worksheet,
+        retry=1,
+        max_retries=2,
     ):
-        try:
-            logger.info("PROCESSING DATA PROV PROCESS")
-            dict_step_type_idname = {}
+        while retry < max_retries + 1:
+            try:
+                logger.info("PROCESSING DATA PROV PROCESS")
+                dict_step_type_idname = {}
 
-            # Declare double_flow_true or extend_flow_true with boolean for double and extend flow handling
-            double_flow_true = True if double_extend_value == "double" else False
-            step_type_name = (
-                "Data Prov Extension With Keyword Mapping"
-                if double_extend_value == "double"
-                else (
-                    "Data Extend Wallet Expiry"
-                    if double_extend_value == "extend"
-                    else "Data Prov With Keyword Mapping"
+                # Declare double_flow_true or extend_flow_true with boolean for double and extend flow handling
+                double_flow_true = (
+                    True if self.double_extend_value == "double" else False
                 )
-            )
-
-            # Declare Variable for Bulk Service Wallet Value
-            bs_wallet = f"{double_extend_value.upper()}{'' if double_extend_value == '' else '_'}{bs_row_data[nf.NF_INDEX_WALLET]}"
-
-            logger.info(f"Executing Step Type: {step_type_name.upper()}")
-            # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
-
-            # Call function 'nf_steps_default_input' to fill up the common fields
-            # 95 = DATA PROV WITH KEYWORD MAPPING
-            # 96 = DATA PROV EXTEND WITH KEYWORD MAPPING <= FOR DOUBLE FLOW
-            self.nf_steps_default_input(
-                bs_wallet,
-                f"//select[@id='dd_stype_id']//option[@value='{96 if double_flow_true else 95}']",
-            )
-            # Section to Input Default Values from BS Worksheet
-            # Input Default Jnetx Wallet Type Dropdown
-            # self.wd.perform_action(
-            #     "xpath",
-            #     f"//option[contains(text(), '{bs_row_data[nf.NF_INDEX_WALLET]}')]",
-            #     "click",
-            # )
-
-            # Input Default Jnetx Wallet Type Dropdown
-            self.wd.perform_action(
-                "xpath",
-                f"//select[@name='jnetx_wallet_type_id']//option[contains(text(), '{bs_row_data[nf.NF_INDEX_WALLET]}')][1]",
-                "click",
-            )
-
-            # Input Default Wallet Keyword Field
-            self.wd.perform_action(
-                "xpath",
-                f"(//input[@name='jnetxprov_walletkeywords2[]'])[1]",
-                "sendkeys",
-                bs_row_data[nf.NF_INDEX_WALLET],
-            )
-
-            # Input Default Data Alloc Field
-            self.wd.perform_action(
-                "xpath",
-                f"(//input[@name='jnetxprov_dataallocs2[]'])[1]",
-                "sendkeys",
-                f"{int(bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_AMOUNT]) // 1024}GB",
-            )
-
-            # Input Default Wallet Amount Field
-            self.wd.perform_action(
-                "xpath",
-                f"(//input[@name='jnetxprov_walletamounts2[]'])[1]",
-                "sendkeys",
-                bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_AMOUNT],
-            )
-
-            # Input Default SDM Prov Keyword Field
-            self.wd.perform_action(
-                "xpath",
-                f"(//input[@name='jnetxprov_sdmprovkeyword2[]'])[1]",
-                "sendkeys",
-                bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_KEYWORD],
-            )
-
-            # Get ParamMatrix rows that equals between ParamMatrix 'Service Name' and 'Bulk Service Name'
-            param_matrix_rows = self.gs.get_rows_by_name(
-                param_worksheet, bs_row_data[nf.NF_INDEX_NAME]
-            )
-            # If bot didn't found available to fill up using parammatrix value, skip.
-            if len(param_matrix_rows) != 0:
-                logger.info(f"Step Type has multiple ParamMatrix for {step_type_name}")
-                for index, row in enumerate(param_matrix_rows, 2):
-                    logger.info("Filling up additional Param Values...")
-                    # Get ParamMatrix data values via row
-                    row_param_data = param_worksheet.row_values(row)
-
-                    # Click 'Add More Param to Wallet Keyword &Data Allocation Map' to add new field entry
-                    self.wd.perform_action(
-                        "xpath",
-                        "//a[@onclick='javascript: add_param_walletkeyword_dataalloc_field_sdm_prov();']",
-                        "click",
+                step_type_name = (
+                    "Data Prov Extension With Keyword Mapping"
+                    if self.double_extend_value == "double"
+                    else (
+                        "Data Extend Wallet Expiry"
+                        if self.double_extend_value == "extend"
+                        else "Data Prov With Keyword Mapping"
                     )
+                )
 
-                    logger.info(f"PARAM DATA PROV = ENTRY PARAM{index-1}")
+                # Declare Variable for Bulk Service Wallet Value
+                bs_wallet = f"{self.double_extend_value.upper()}{'' if self.double_extend_value == '' else '_'}{self.bs_row_data[nf.NF_INDEX_WALLET]}"
 
-                    # Fill up Param Fields
-                    # Input Param Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='jnetxprov_params2[]'])[{index}]",
-                        "sendkeys",
-                        row_param_data[nf.INDEX_PARAM_MATRIX_PARAM],
-                    )
+                logger.info(f"Executing Step Type: {step_type_name.upper()}")
+                # Redirect to Add Step Page
+                self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
-                    # Input Wallet Keyword Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='jnetxprov_walletkeywords2[]'])[{index}]",
-                        "sendkeys",
-                        row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_KEYWORD],
-                    )
+                # Call function 'nf_steps_default_input' to fill up the common fields
+                # 95 = DATA PROV WITH KEYWORD MAPPING
+                # 96 = DATA PROV EXTEND WITH KEYWORD MAPPING <= FOR DOUBLE FLOW
+                self.nf_steps_default_input(
+                    bs_wallet,
+                    f"//select[@id='dd_stype_id']//option[@value='{96 if double_flow_true else 95}']",
+                )
+                # Section to Input Default Values from BS Worksheet
+                # Input Default Jnetx Wallet Type Dropdown
+                self.wd.perform_action(
+                    "xpath",
+                    f"//select[@name='jnetx_wallet_type_id']//option[contains(text(), '{self.bs_row_data[nf.NF_INDEX_WALLET]}')][1]",
+                    "click",
+                )
 
-                    # Input Data Alloc Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='jnetxprov_dataallocs2[]'])[{index}]",
-                        "sendkeys",
-                        f"{int(row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_AMOUNT]) // 1024}GB",
-                    )
+                # Input Default Wallet Keyword Field
+                logger.info("Input Default Param: DEFAULT")
+                logger.info(
+                    f"Input Default Wallet Keyword: {self.bs_row_data[nf.NF_INDEX_WALLET]}"
+                )
+                self.wd.perform_action(
+                    "xpath",
+                    f"(//input[@name='jnetxprov_walletkeywords2[]'])[1]",
+                    "sendkeys",
+                    self.bs_row_data[nf.NF_INDEX_WALLET],
+                )
 
-                    # Input Wallet Amount Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='jnetxprov_walletamounts2[]'])[{index}]",
-                        "sendkeys",
-                        row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_AMOUNT],
-                    )
+                # Input Default Data Alloc Field
+                data_alloc = f"{int(self.bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_AMOUNT]) // 1024}GB"
+                logger.info(f"Input Default Data Alloc: {data_alloc}")
+                self.wd.perform_action(
+                    "xpath",
+                    f"(//input[@name='jnetxprov_dataallocs2[]'])[1]",
+                    "sendkeys",
+                    data_alloc,
+                )
 
-                    # Input Default SDM Prov Keyword Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='jnetxprov_sdmprovkeyword2[]'])[{index}]",
-                        "sendkeys",
-                        bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_KEYWORD],
-                    )
-            else:
-                logger.info("Additional Param not Found")
+                # Input Default Wallet Amount Field
+                logger.info(
+                    f"Input Default Wallet Amount: {self.bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_AMOUNT]}"
+                )
+                self.wd.perform_action(
+                    "xpath",
+                    f"(//input[@name='jnetxprov_walletamounts2[]'])[1]",
+                    "sendkeys",
+                    self.bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_AMOUNT],
+                )
 
-            # try:
-            #     # Click 'Add' button to submit and wait for the success message element to appear.
-            #     logger.info("Fetching Success Message....")
-            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                # Input Default SDM Prov Keyword Field
+                logger.info(
+                    f"Input Default SDM Prov Keyword: {self.bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_KEYWORD]}"
+                )
+                self.wd.perform_action(
+                    "xpath",
+                    f"(//input[@name='jnetxprov_sdmprovkeyword2[]'])[1]",
+                    "sendkeys",
+                    self.bs_row_data[nf.NF_INDEX_DEFAULT_WALLET_KEYWORD],
+                )
 
-            # except (TimeoutException, TimeoutError):
-            #     logger.info(
-            #         "Page took time to load the success message, refreshing page.."
-            #     )
-            #     self.wd.driver.refresh()
-
-            # finally:
-            #     # Call function to handle getting success message element
-            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
-
-            # Section to get success message after clicking submit button
-            element_value = self.wd.submit_form_and_wait_for_success(
-                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-            )
-
-            logger.info(f"STEP '{step_type_name.upper()}' SUCCESSFULLY CREATED!")
-
-            step_id = helper.get_after_word(element_value, "step")
-            logger.info(f"STEP ID Retrieved: {step_id} for {step_type_name.upper()}")
-
-            # Declare dictionary step type data with step id and name to use it later for Flow sequence.
-            dict_step_type_idname = {
-                "data_prov_id": step_id,
-                "data_prov_name": bs_wallet,
-            }
-
-            logger.info(
-                f"Step Type {step_type_name.upper()} Data Result: {dict_step_type_idname}"
-            )
-
-            return dict_step_type_idname
-
-        except Exception as e:
-            logger.info(
-                f"An error has occurred while processing Step Type {step_type_name.upper()} 'nf_steps_data_prov_with_keyword_mapping'\n ERROR: {e}"
-            )
-
-    def step_type_in_add_wallet_fup(
-        self, double_extend_value, bs_service_id, bs_row_data
-    ):
-        try:
-            dict_in_prov_data = {}
-            step_flow_construct_value = bs_row_data[
-                nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
-            ].lower()
-            sms_voice_conditions = {
-                # If Step and flow construct has Unli SMS
-                "unli_sms": (
-                    True if "unli sms" in step_flow_construct_value else False
-                ),
-                # If Step and flow construct has Unli Voice
-                "unli_voice": (
-                    True if "unli voice" in step_flow_construct_value else False
-                ),
-            }
-
-            for sms_voice_key, sms_voice_true in sms_voice_conditions.items():
-                if sms_voice_true:
-                    # Declare double_extend_value and double_flow_true for double flow handling
-                    # Declare step_type_name
-                    step_type_name, double_flow_true = helper.nf_get_in_prov_values(
-                        double_extend_value, sms_voice_key, "sms_voice_service"
-                    )
-                    if sms_voice_key == "unli_sms":
-                        step_name = "DOUBLE_SMS_ALLNET_UNLI"
-                        amount_field_value = (
-                            500
-                            if bs_row_data[nf.NF_INDEX_BRAND].lower() == "ghp"
-                            else 700
-                        )
-                    else:
-                        step_name = "DOUBLE_VOICE_ALLNET_UNLI"
-                        amount_field_value = (
-                            300
-                            if bs_row_data[nf.NF_INDEX_BRAND].lower() == "ghp"
-                            else 200
-                        )
-
-                    logger.info(f"Executing Step Type: {step_type_name.upper()}")
-
-                    # Redirect to Add Step Page
-                    self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-                    # self.wd.wait_until_element(
-                    #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
-                    # )
-
-                    # Call function 'nf_steps_default_input' to fill up default field values
-                    self.nf_steps_default_input(
-                        step_name,
-                        f"//select[@id='dd_stype_id']//option[@value='129']",
-                        sms_voice=sms_voice_key,
-                    )
-
-                    # Input IN Serivce Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"//select[@name='in_fup_step_service']//option[@value='{196 if sms_voice_key == 'unli_sms' else 197}']",
-                        "click",
-                    )
-
-                    # Amount
-                    self.wd.perform_action(
-                        "name",
-                        nf.NF_STEP_AMOUNT_FIELD,
-                        "sendkeys",
-                        amount_field_value,
-                    )
-
-                    # try:
-                    #     # Click 'Add' button to submit and wait for the success message element to appear.
-                    #     logger.info("Fetching Success Message....")
-                    #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-                    # except (TimeoutException, TimeoutError):
-                    #     logger.info(
-                    #         "Page took time to load the success message, refreshing page.."
-                    #     )
-                    #     self.wd.driver.refresh()
-
-                    # finally:
-                    #     # Call function to handle getting success message element
-                    #     element_value = self.get_success_message_text(
-                    #         nf.STEP_SUCCESS_MESSAGE
-                    #     )
-
-                    # Section to get success message after clicking submit button
-                    element_value = self.wd.submit_form_and_wait_for_success(
-                        "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-                    )
-
+                # If bot didn't found available to fill up using parammatrix value, skip.
+                if len(self.param_rows) != 0:
                     logger.info(
-                        f"STEP FOR '{step_type_name.upper()}' SUCCESSFULLY CREATED!"
+                        "Filling up step type sub fields using ParamMatrix values.."
                     )
+                    try:
+                        for index, row in enumerate(self.param_rows, 2):
+                            # Get ParamMatrix data values via row
+                            row_param_data = param_worksheet.row_values(row)
+                            logger.info(f"Param Row: {row}")
+                            # Click 'Add More Param to Wallet Keyword &Data Allocation Map' to add new field entry
+                            self.wd.perform_action(
+                                "xpath",
+                                "//a[@onclick='javascript: add_param_walletkeyword_dataalloc_field_sdm_prov();']",
+                                "click",
+                            )
 
-                    # Get Steps unique ID from success message
-                    steps_id = helper.get_after_word(element_value, "step")
-                    logger.info("Step ID Collected")
+                            # Fill up Param Fields
+                            # Input Param Field
+                            logger.info(
+                                f"Input Param: {row_param_data[nf.INDEX_PARAM_MATRIX_PARAM]}"
+                            )
+                            self.wd.perform_action(
+                                "xpath",
+                                f"(//input[@name='jnetxprov_params2[]'])[{index}]",
+                                "sendkeys",
+                                row_param_data[nf.INDEX_PARAM_MATRIX_PARAM],
+                            )
 
-                    logger.info(f"STEP ID Retrieved: {steps_id} for {step_type_name}")
+                            # Input Wallet Keyword Field
+                            logger.info(
+                                f"Input Wallet Keyword: {row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_KEYWORD]}"
+                            )
+                            self.wd.perform_action(
+                                "xpath",
+                                f"(//input[@name='jnetxprov_walletkeywords2[]'])[{index}]",
+                                "sendkeys",
+                                row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_KEYWORD],
+                            )
 
-                    # Set Step type result into Dictionary/Object then return
-                    dict_in_prov = {
-                        f"{sms_voice_key}_id": steps_id,
-                        f"{sms_voice_key}_name": step_name,
-                    }
-                    logger.info(f"Step type {step_type_name} result: {dict_in_prov}")
-                    dict_in_prov_data.update(dict_in_prov)
+                            # Input Data Alloc Field
+                            data_alloc_param = f"{int(row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_AMOUNT]) // 1024}GB"
+                            logger.info(f"Input Data Alloc: {data_alloc_param}")
+                            self.wd.perform_action(
+                                "xpath",
+                                f"(//input[@name='jnetxprov_dataallocs2[]'])[{index}]",
+                                "sendkeys",
+                                data_alloc_param,
+                            )
 
-            return dict_in_prov_data
+                            # Input Wallet Amount Field
+                            logger.info(
+                                f"Input Wallet Amount: {row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_AMOUNT]}"
+                            )
+                            self.wd.perform_action(
+                                "xpath",
+                                f"(//input[@name='jnetxprov_walletamounts2[]'])[{index}]",
+                                "sendkeys",
+                                row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_AMOUNT],
+                            )
 
-        except Exception as e:
-            error_msg = f"An error has occurred while processing Step Type IN PROV SERVICE - UNLI SMS 'step_type_in_prov_service_sms'\n ERROR: {e}"
-            logger.info(error_msg)
-            self.wd.stop_process()
-
-    def step_type_in_prov_service(
-        self, double_extend_value, bs_service_id, bs_row_data
-    ):
-        try:
-            dict_in_prov_data = {}
-            step_flow_construct_value = bs_row_data[
-                nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
-            ].lower()
-
-            sms_voice_conditions = {
-                # If Step and flow construct has Unli SMS
-                "unli_sms": (
-                    True if "unli sms" in step_flow_construct_value else False
-                ),
-                # If Step and flow construct has Unli Voice
-                "unli_voice": (
-                    True if "unli voice" in step_flow_construct_value else False
-                ),
-            }
-
-            # Start loop for unli sms and unli voice
-            for sms_voice_key, sms_voice_true in sms_voice_conditions.items():
-                if sms_voice_true:
-                    # Declare double_extend_value and double_flow_true for double flow handling
-                    # Declare step_type_name
-                    step_type_name, double_flow_true = helper.nf_get_in_prov_values(
-                        double_extend_value, sms_voice_key, "sms_voice_service"
-                    )
-                    if sms_voice_key == "unli_sms":
-                        brands = bs_row_data[nf.NF_INDEX_BRAND].lower()
-                        step_name = "SMS_ALLNET_UNLI"
-
-                        amount_field_value = 500 if brands == "ghp" else 700
-                    else:
-                        step_name = "VOICE_ALLNET_UNLI"
-                        amount_field_value = 300 if brands == "ghp" else 200
-
-                    logger.info(f"Executing Step Type: {step_type_name.upper()}")
-
-                    # Redirect to Add Step Page
-                    self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-                    # self.wd.wait_until_element(
-                    #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
-                    # )
-
+                            # # Input Default SDM Prov Keyword Field
+                            # logger.info(
+                            #     f"Input SDM Prov Keyword: {row_param_data[nf.]}"
+                            # )
+                            # self.wd.perform_action(
+                            #     "xpath",
+                            #     f"(//input[@name='jnetxprov_sdmprovkeyword2[]'])[{index}]",
+                            #     "sendkeys",
+                            #     row_param_data[nf.NF_PARAMMATRIX_INDEX_WALLET_KEYWORD],
+                            # )
+                    except Exception as e:
+                        logger.info(
+                            f"An error has occurred while using paramMatrix values, will continue to next step.."
+                        )
+                        # store paramMatrix RPA Remark failed to hashmap
+                        self.param_rpa_remark_fail["DATA"] = "Failed"
+                else:
                     logger.info(
-                        "Add Step Page Successfully Reached! Filling up Step Fields..."
+                        f"No ParamMatrix found for this service name {self.bs_row_data[nf.NF_INDEX_NAME]}, will proceed to next step.."
                     )
 
-                    # Call function 'nf_steps_default_input' to fill up default field values
-                    self.nf_steps_default_input(
-                        step_name,
-                        f"//select[@id='dd_stype_id']//option[@value='5']",
-                        sms_voice=sms_voice_key,
+                # Section to get success message after clicking submit button
+                element_value = self.wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                )
+
+                logger.info(f"STEP '{step_type_name.upper()}' SUCCESSFULLY CREATED!")
+
+                step_id = helper.get_after_word(element_value, "step")
+                logger.info(
+                    f"STEP ID Retrieved: {step_id} for {step_type_name.upper()}"
+                )
+
+                # Declare dictionary step type data with step id and name to use it later for Flow sequence.
+                dict_step_type_idname = {
+                    "data_prov_id": step_id,
+                    "data_prov_name": bs_wallet,
+                }
+
+                logger.info(
+                    f"Step Type {step_type_name.upper()} Data Result: {dict_step_type_idname}"
+                )
+
+                return dict_step_type_idname
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred while processing Step Type {step_type_name}\n ERROR: {e}"
                     )
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail["DATA"] = "Failed"
+                    break
 
-                    # Input IN Serivce Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"//select[@name='in_service_id']//option[@value='{196 if sms_voice_key == 'unli_sms' else 197}']",
-                        "click",
+                # Trigger continue loop
+                retry += 1
+                logger.warning(
+                    f"Failed to create step type {step_type_name}, retrying..."
+                )
+                time.sleep(2)
+
+    def step_type_in_add_wallet_fup(self, bs_service_id, retry=1, max_retries=2):
+        while retry < max_retries + 1:
+            try:
+                dict_in_prov_data = {}
+                step_flow_construct_value = self.bs_row_data[
+                    nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
+                ].lower()
+                sms_voice_conditions = {
+                    # If Step and flow construct has Unli SMS
+                    "unli_sms": (
+                        True if "unli sms" in step_flow_construct_value else False
+                    ),
+                    # If Step and flow construct has Unli Voice
+                    "unli_voice": (
+                        True if "unli voice" in step_flow_construct_value else False
+                    ),
+                }
+
+                for sms_voice_key, sms_voice_true in sms_voice_conditions.items():
+                    if sms_voice_true:
+                        # Declare double_extend_value and double_flow_true for double flow handling
+                        # Declare step_type_name
+                        step_type_name, double_flow_true = helper.nf_get_in_prov_values(
+                            self.double_extend_value, sms_voice_key, "sms_voice_service"
+                        )
+                        if sms_voice_key == "unli_sms":
+                            step_name = "DOUBLE_SMS_ALLNET_UNLI"
+                            amount_field_value = (
+                                500
+                                if self.bs_row_data[nf.NF_INDEX_BRAND].lower() == "ghp"
+                                else 700
+                            )
+                        else:
+                            step_name = "DOUBLE_VOICE_ALLNET_UNLI"
+                            amount_field_value = (
+                                300
+                                if self.bs_row_data[nf.NF_INDEX_BRAND].lower() == "ghp"
+                                else 200
+                            )
+
+                        logger.info(f"Executing Step Type: {step_type_name.upper()}")
+
+                        # Redirect to Add Step Page
+                        self.wd.redirect_to_page(
+                            self.url_step_page, nf.NF_ADD_BTN_INPUT
+                        )
+                        # self.wd.wait_until_element(
+                        #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
+                        # )
+
+                        # Call function 'nf_steps_default_input' to fill up default field values
+                        self.nf_steps_default_input(
+                            step_name,
+                            f"//select[@id='dd_stype_id']//option[@value='129']",
+                            sms_voice=sms_voice_key,
+                        )
+
+                        # Input IN Serivce Field
+                        in_service_value = 196 if sms_voice_key == "unli_sms" else 197
+                        logger.info(f"Dropdwn IN Service: {in_service_value}")
+                        self.wd.perform_action(
+                            "xpath",
+                            f"//select[@name='in_fup_step_service']//option[@value='{in_service_value}']",
+                            "click",
+                        )
+
+                        # Input Amount Field
+                        logger.info(f"Input Amount: {amount_field_value}")
+                        self.wd.perform_action(
+                            "name",
+                            nf.NF_STEP_AMOUNT_FIELD,
+                            "sendkeys",
+                            amount_field_value,
+                        )
+                        # Section to get success message after clicking submit button
+                        element_value = self.wd.submit_form_and_wait_for_success(
+                            "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                        )
+
+                        logger.info(
+                            f"STEP FOR '{step_type_name.upper()}' SUCCESSFULLY CREATED!"
+                        )
+
+                        # Get Steps unique ID from success message
+                        steps_id = helper.get_after_word(element_value, "step")
+                        logger.info("Step ID Collected")
+
+                        logger.info(
+                            f"STEP ID Retrieved: {steps_id} for {step_type_name}"
+                        )
+
+                        # Set Step type result into Dictionary/Object then return
+                        dict_in_prov = {
+                            f"{sms_voice_key}_id": steps_id,
+                            f"{sms_voice_key}_name": step_name,
+                        }
+                        logger.info(
+                            f"Step type {step_type_name} result: {dict_in_prov}"
+                        )
+                        dict_in_prov_data.update(dict_in_prov)
+
+                return dict_in_prov_data
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred while processing Step Type IN ADD WALLET FUP - {sms_voice_key.upper()} 'in_add_wallet_fup'\n ERROR: {e}"
                     )
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail[
+                        sms_voice_key.replace("unli_", "").upper()
+                    ] = "Failed"
+                    break
 
-                    self.wd.perform_action(
-                        "name",
-                        nf.NF_STEP_FUP_AMOUNT_FIELD,
-                        "sendkeys",
-                        amount_field_value,
+                # Trigger continue loop
+                retry += 1
+                logger.warning(
+                    f"Failed to create step type IN ADD WALLET FUP - {sms_voice_key.upper()}, retrying..."
+                )
+                time.sleep(2)
+
+    def step_type_in_prov_service(self, bs_service_id, retry=1, max_retries=2):
+        while retry < max_retries + 1:
+            try:
+                dict_in_prov_data = {}
+                step_flow_construct_value = self.bs_row_data[
+                    nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
+                ].lower()
+
+                sms_voice_conditions = {
+                    # If Step and flow construct has Unli SMS
+                    "unli_sms": (
+                        True if "unli sms" in step_flow_construct_value else False
+                    ),
+                    # If Step and flow construct has Unli Voice
+                    "unli_voice": (
+                        True if "unli voice" in step_flow_construct_value else False
+                    ),
+                }
+
+                # Start loop for unli sms and unli voice
+                for sms_voice_key, sms_voice_true in sms_voice_conditions.items():
+                    if sms_voice_true:
+                        # Declare double_extend_value and double_flow_true for double flow handling
+                        # Declare step_type_name
+                        step_type_name, double_flow_true = helper.nf_get_in_prov_values(
+                            self.double_extend_value, sms_voice_key, "sms_voice_service"
+                        )
+                        if sms_voice_key == "unli_sms":
+                            brands = self.bs_row_data[nf.NF_INDEX_BRAND].lower()
+                            step_name = "SMS_ALLNET_UNLI"
+
+                            amount_field_value = 500 if brands == "ghp" else 700
+                        else:
+                            step_name = "VOICE_ALLNET_UNLI"
+                            amount_field_value = 300 if brands == "ghp" else 200
+
+                        logger.info(f"Executing Step Type: {step_type_name.upper()}")
+
+                        # Redirect to Add Step Page
+                        self.wd.redirect_to_page(
+                            self.url_step_page, nf.NF_ADD_BTN_INPUT
+                        )
+                        # self.wd.wait_until_element(
+                        #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
+                        # )
+
+                        logger.info(
+                            "Add Step Page Successfully Reached! Filling up Step Fields..."
+                        )
+
+                        # Call function 'nf_steps_default_input' to fill up default field values
+                        self.nf_steps_default_input(
+                            step_name,
+                            f"//select[@id='dd_stype_id']//option[@value='5']",
+                            sms_voice=sms_voice_key,
+                        )
+
+                        # Input IN Serivce Field
+                        self.wd.perform_action(
+                            "xpath",
+                            f"//select[@name='in_service_id']//option[@value='{196 if sms_voice_key == 'unli_sms' else 197}']",
+                            "click",
+                        )
+
+                        self.wd.perform_action(
+                            "name",
+                            nf.NF_STEP_FUP_AMOUNT_FIELD,
+                            "sendkeys",
+                            amount_field_value,
+                        )
+
+                        # Section to get success message after clicking submit button
+                        element_value = self.wd.submit_form_and_wait_for_success(
+                            "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                        )
+
+                        logger.info(
+                            f"STEP FOR '{step_type_name}' SUCCESSFULLY CREATED!"
+                        )
+
+                        # Get Steps unique ID from success message
+                        steps_id = helper.get_after_word(element_value, "step")
+                        logger.info("Step ID Collected")
+
+                        logger.info(
+                            f"STEP ID Retrieved: {steps_id} for {step_type_name}"
+                        )
+
+                        # Set Step type result into Dictionary/Object then return
+                        dict_in_prov = {
+                            f"{sms_voice_key}_id": steps_id,
+                            f"{sms_voice_key}_name": step_name,
+                        }
+                        logger.info(
+                            f"Step type {step_type_name} result: {dict_in_prov}"
+                        )
+                        dict_in_prov_data.update(dict_in_prov)
+
+                return dict_in_prov_data
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred while processing Step Type IN PROV SERVICE step_type_in_prov_service_sms'\n ERROR: {e}"
                     )
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail[
+                        sms_voice_key.replace("unli_", "").upper()
+                    ] = "Failed"
+                    break
 
-                    # try:
-                    #     # Click 'Add' button to submit and wait for the success message element to appear.
-                    #     logger.info("Fetching Success Message....")
-                    #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
+                # Trigger continue loop
+                retry += 1
+                logger.warning(
+                    f"Failed to create step type IN PROV SERVICE - {sms_voice_key.upper()}, retrying..."
+                )
+                time.sleep(2)
 
-                    # except (TimeoutException, TimeoutError):
-                    #     logger.info(
-                    #         "Page took time to load the success message, refreshing page.."
-                    #     )
-                    #     self.wd.driver.refresh()
+    def step_type_hlr_ply(self, bs_service_id, retry=1, max_retries=2):
+        while retry < max_retries + 1:
+            try:
+                logger.info("Executing Step Type: HLR - PLY")
 
-                    # finally:
-                    #     # Call function to handle getting success message element
-                    #     element_value = self.get_success_message_text(
-                    #         nf.STEP_SUCCESS_MESSAGE
-                    #     )
+                # Redirect to Add Step Page
+                self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
 
-                    # Section to get success message after clicking submit button
-                    element_value = self.wd.submit_form_and_wait_for_success(
-                        "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                self.nf_steps_default_input(
+                    "HLR_PLY",
+                    "//option[contains(text(), 'HLR PLY') and @value='40']",
+                )
+
+                # Input HLR Ply Service Dropdown Field
+                self.wd.perform_action(
+                    "xpath",
+                    (
+                        "//select[@name='hlr_ply_service_id']//option[@value='3']"
+                        if self.bs_row_data[nf.NF_INDEX_BRAND].lower() == "ghp"
+                        else "//select[@name='hlr_ply_service_id']//option[@value='2']"
+                    ),
+                    "click",
+                )
+                # Section to get success message after clicking submit button
+                element_value = self.wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                )
+
+                logger.info("STEP FOR 'HLR PLY' SUCCESSFULLY CREATED!")
+
+                # Get Steps unique ID from success message
+                steps_id = helper.get_after_word(element_value, "step")
+                logger.info("Step ID Collected")
+
+                logger.info(f"Step ID Retrieved: {steps_id} for HLR PLY")
+
+                # Set Step type result into Dictionary/Object then return
+                dict_step_type_idname = {
+                    "hlr_ply_id": steps_id,
+                    "hlr_ply_name": "HLR_PLY",
+                }
+                logger.info(f"Step type HLR - PLY result: {dict_step_type_idname}")
+                return dict_step_type_idname
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"Failed to process step type 'HLR PLY', will proceed to defining Flow\n ERROR: {e}"
                     )
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail["HLR"] = "Failed"
+                    break
 
-                    logger.info(f"STEP FOR '{step_type_name}' SUCCESSFULLY CREATED!")
-
-                    # Get Steps unique ID from success message
-                    steps_id = helper.get_after_word(element_value, "step")
-                    logger.info("Step ID Collected")
-
-                    logger.info(f"STEP ID Retrieved: {steps_id} for {step_type_name}")
-
-                    # Set Step type result into Dictionary/Object then return
-                    dict_in_prov = {
-                        f"{sms_voice_key}_id": steps_id,
-                        f"{sms_voice_key}_name": step_name,
-                    }
-                    logger.info(f"Step type {step_type_name} result: {dict_in_prov}")
-                    dict_in_prov_data.update(dict_in_prov)
-
-            return dict_in_prov_data
-
-        except Exception as e:
-            error_msg = f"An error has occurred while processing Step Type IN PROV SERVICE step_type_in_prov_service_sms'\n ERROR: {e}"
-            logger.info(error_msg)
-            self.wd.stop_process()
-
-    def step_type_hlr_ply(self, bs_service_id, bs_row_data):
-        try:
-            logger.info("Executing Step Type: HLR - PLY")
-
-            # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
-
-            self.nf_steps_default_input(
-                "HLR_PLY",
-                "//option[contains(text(), 'HLR PLY') and @value='40']",
-            )
-
-            # Input HLR Ply Service Dropdown Field
-            self.wd.perform_action(
-                "xpath",
-                (
-                    "//select[@name='hlr_ply_service_id']//option[@value='3']"
-                    if bs_row_data[nf.NF_INDEX_BRAND].lower() == "ghp"
-                    else "//select[@name='hlr_ply_service_id']//option[@value='2']"
-                ),
-                "click",
-            )
-
-            # try:
-            #     # Click 'Add' button to submit and wait for the success message element to appear.
-            #     logger.info("Fetching Success Message....")
-            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-            # except (TimeoutException, TimeoutError):
-            #     logger.info(
-            #         "Page took time to load the success message, refreshing page.."
-            #     )
-            #     self.wd.driver.refresh()
-
-            # finally:
-            #     # Call function to handle getting success message element
-            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
-
-            # Section to get success message after clicking submit button
-            element_value = self.wd.submit_form_and_wait_for_success(
-                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-            )
-
-            logger.info("STEP FOR 'HLR PLY' SUCCESSFULLY CREATED!")
-
-            # Get Steps unique ID from success message
-            steps_id = helper.get_after_word(element_value, "step")
-            logger.info("Step ID Collected")
-
-            logger.info(f"Step ID Retrieved: {steps_id} for HLR PLY")
-
-            # Set Step type result into Dictionary/Object then return
-            dict_step_type_idname = {
-                "hlr_ply_id": steps_id,
-                "hlr_ply_name": "HLR_PLY",
-            }
-            logger.info(f"Step type HLR - PLY result: {dict_step_type_idname}")
-            return dict_step_type_idname
-
-        except Exception as e:
-            logger.info(
-                f"Failed to process step type 'HLR PLY', will proceed to defining Flow\n ERROR: {e}"
-            )
+                # Trigger continue loop
+                retry += 1
+                logger.warning(f"Failed to create step type HLR PLY, retrying...")
+                time.sleep(2)
 
     def modify_extend_first_expiry(self, old_step_id, extend_amount, extend_duration):
         try:
             # Redirection to Edit page for Extend First Expiry using its old step id
-            logger.info(f"OLD STEP ID: {old_step_id}")
             logger.info(
-                "Modifying Existing Step Type: EXTEND FLOW - EXTEND FIRST EXPIRY"
+                f"Modifying Existing Step Type: EXTEND FLOW - EXTEND FIRST EXPIRY = {old_step_id}"
             )
             logger.info(
                 f"Redirecting to Edit Page Using Extend First Expiry ID : {old_step_id}"
@@ -867,194 +911,196 @@ class StepTypeService:
             return data_id_name
         except Exception as e:
             logger.info(
-                f"An error has occurred in EXTEND FLOW - EXTEND FIRST EXPIRY\nERROR: {e}"
+                f"An error has occurred while modifying EXTEND FIRST EXPIRY\nERROR: {e}"
             )
 
-    def step_type_data_extend_wallet_expiry(self, bs_service_id, bs_row_data):
-        try:
-            logger.info("Executing Step Type: DATA EXTEND WALLET EXPIRY")
-            # Redirect to Add Step Page
-            self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
-            # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
-
-            logger.info("Filling up data extend wallet expiry fields...")
-
-            # Declare wallet name
-            bs_wallet = f"EXTEND_{bs_row_data[nf.NF_INDEX_WALLET]}"
-
-            # Section to Input Default Values from BS Worksheet
-            # Call function 'nf_steps_default_input' to fill up default field values
-            self.nf_steps_default_input(
-                bs_wallet,
-                nf.STEP_TYPE_DATA_EXTEND_WALLET_EXPIRY,
-            )
-
-            # Input Default Jnetx Wallet Type Dropdown
-            self.wd.perform_action(
-                "xpath",
-                f"//select[@name='jnetx_wallet_type_id']//option[contains(text(), '{bs_row_data[nf.NF_INDEX_WALLET]}')][1]",
-                "click",
-            )
-
-            # Input Expiry Field
-            self.wd.perform_action(
-                "xpath",
-                f"(//input[@name='extend_step_expiries[]'])[1]",
-                "sendkeys",
-                f"{int(bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}",
-            )
-
-            # try:
-            #     # Click 'Add' button to submit and wait for the success message element to appear.
-            #     logger.info("Fetching Success Message....")
-            #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-            # except (TimeoutException, TimeoutError):
-            #     logger.info(
-            #         "Page took time to load the success message, refreshing page.."
-            #     )
-            #     self.wd.driver.refresh()
-
-            # finally:
-            #     # Call function to handle getting success message element
-            #     element_value = self.get_success_message_text(nf.STEP_SUCCESS_MESSAGE)
-
-            # Section to get success message after clicking submit button
-            element_value = self.wd.submit_form_and_wait_for_success(
-                "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-            )
-
-            logger.info(f"STEP 'DATA EXTEND WALLET EXPIRY' SUCCESSFULLY CREATED!")
-
-            # Get Steps unique ID from success message
-            step_id = helper.get_after_word(element_value, "step")
-            logger.info(f"STEP ID Retrieved: {step_id} for 'DATA EXTEND WALLET EXPIRY'")
-
-            # Declare dictionary step type data with step id and name to use it later for Flow sequence.
-            dict_step_type_idname = {
-                "data_prov_id": step_id,
-                "data_prov_name": bs_wallet,
-            }
-
-            logger.info(
-                f"Step Type 'DATA EXTEND WALLET EXPIRY' Data Result: {dict_step_type_idname}"
-            )
-
-            return dict_step_type_idname
-
-        except Exception as e:
-            logger.info(
-                f"An error has occurred in function of EXTEND DATA WALLET EXPIRY\nERROR: {e}"
-            )
-
-    def step_type_in_extend_wallet_expiry(
-        self,
-        bs_service_id,
-        bs_row_data,
+    def step_type_data_extend_wallet_expiry(
+        self, bs_service_id, retry=1, max_retries=2
     ):
-        try:
-            dict_in_prov_data = {}
-            step_flow_construct_value = bs_row_data[
-                nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
-            ].lower()
+        while retry < max_retries + 1:
+            try:
+                logger.info("Executing Step Type: DATA EXTEND WALLET EXPIRY")
+                # Redirect to Add Step Page
+                self.wd.redirect_to_page(self.url_step_page, nf.NF_ADD_BTN_INPUT)
+                # self.wd.wait_until_element("xpath", nf.NF_ADD_BTN_INPUT, "clickable")
+                # Declare wallet name
+                bs_wallet = f"EXTEND_{self.bs_row_data[nf.NF_INDEX_WALLET]}"
 
-            sms_voice_conditions = {
-                # If Step and flow construct has Unli SMS
-                "unli_sms": (
-                    True if "unli sms" in step_flow_construct_value else False
-                ),
-                # If Step and flow construct has Unli Voice
-                "unli_voice": (
-                    True if "unli voice" in step_flow_construct_value else False
-                ),
-            }
+                # Section to Input Default Values from BS Worksheet
+                # Call function 'nf_steps_default_input' to fill up default field values
+                self.nf_steps_default_input(
+                    bs_wallet,
+                    nf.STEP_TYPE_DATA_EXTEND_WALLET_EXPIRY,
+                )
 
-            # Start loop for unli sms and unli voice
-            for sms_voice_key, sms_voice_true in sms_voice_conditions.items():
-                if sms_voice_true:
-                    step_name = (
-                        "EXTEND_VOICE_ALLNET_UNLI"
-                        if sms_voice_key == "unli_voice"
-                        else "EXTEND_SMS_ALLNET_UNLI"
+                # Input Default Jnetx Wallet Type Dropdown
+                logger.info(
+                    f"Input Jnetx Wallet: {self.bs_row_data[nf.NF_INDEX_WALLET]}"
+                )
+                self.wd.perform_action(
+                    "xpath",
+                    f"//select[@name='jnetx_wallet_type_id']//option[contains(text(), '{self.bs_row_data[nf.NF_INDEX_WALLET]}')][1]",
+                    "click",
+                )
+
+                # Input Expiry Field
+                logger.info(
+                    f"Input Expiry: {int(self.bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}"
+                )
+                self.wd.perform_action(
+                    "xpath",
+                    f"(//input[@name='extend_step_expiries[]'])[1]",
+                    "sendkeys",
+                    f"{int(self.bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}",
+                )
+
+                # Section to get success message after clicking submit button
+                element_value = self.wd.submit_form_and_wait_for_success(
+                    "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                )
+
+                logger.info(f"STEP 'DATA EXTEND WALLET EXPIRY' SUCCESSFULLY CREATED!")
+
+                # Get Steps unique ID from success message
+                step_id = helper.get_after_word(element_value, "step")
+                logger.info(
+                    f"STEP ID Retrieved: {step_id} for 'DATA EXTEND WALLET EXPIRY'"
+                )
+
+                # Declare dictionary step type data with step id and name to use it later for Flow sequence.
+                dict_step_type_idname = {
+                    "data_prov_id": step_id,
+                    "data_prov_name": bs_wallet,
+                }
+
+                logger.info(
+                    f"Step Type 'DATA EXTEND WALLET EXPIRY' Data Result: {dict_step_type_idname}"
+                )
+
+                return dict_step_type_idname
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred in function of EXTEND DATA WALLET EXPIRY\nERROR: {e}"
                     )
-                    logger.info(f"Executing Step Type: IN EXTEND WALLET EXPIRY")
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail["DATA"] = "Failed"
+                    break
 
-                    # Redirect to Add Step Page
-                    url_step_page = f"{get_env_variable('WEBTOOL_BASE_URL')}/nf/index.php?mod=steps&op=add&svc_id={bs_service_id}&details_id={bs_service_id}"
-                    self.wd.redirect_to_page(url_step_page, nf.NF_ADD_BTN_INPUT)
-                    # self.wd.wait_until_element(
-                    #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
-                    # )
+                # Trigger continue loop
+                retry += 1
+                logger.warning(
+                    f"Failed to create step type EXTEND DATA WALLET EXPIRY, retrying..."
+                )
+                time.sleep(2)
 
-                    logger.info("Filling up extend wallet expiry fields...")
+    def step_type_in_extend_wallet_expiry(self, bs_service_id, retry=1, max_retries=2):
+        while retry < max_retries + 1:
+            try:
+                dict_in_prov_data = {}
+                step_flow_construct_value = self.bs_row_data[
+                    nf.NF_INDEX_STEP_AND_FLOW_CONSTRUCT
+                ].lower()
 
-                    # Call function 'nf_steps_default_input' to fill up default field values
-                    self.nf_steps_default_input(
-                        step_name,
-                        nf.STEP_TYPE_IN_EXTEND_WALLET_EXPIRY,
-                        sms_voice=sms_voice_key,
+                sms_voice_conditions = {
+                    # If Step and flow construct has Unli SMS
+                    "unli_sms": (
+                        True if "unli sms" in step_flow_construct_value else False
+                    ),
+                    # If Step and flow construct has Unli Voice
+                    "unli_voice": (
+                        True if "unli voice" in step_flow_construct_value else False
+                    ),
+                }
+
+                # Start loop for unli sms and unli voice
+                for sms_voice_key, sms_voice_true in sms_voice_conditions.items():
+                    if sms_voice_true:
+                        step_name = (
+                            "EXTEND_VOICE_ALLNET_UNLI"
+                            if sms_voice_key == "unli_voice"
+                            else "EXTEND_SMS_ALLNET_UNLI"
+                        )
+                        logger.info(f"Executing Step Type: IN EXTEND WALLET EXPIRY")
+
+                        # Redirect to Add Step Page
+                        self.wd.redirect_to_page(
+                            self.url_step_page, nf.NF_ADD_BTN_INPUT
+                        )
+                        # self.wd.wait_until_element(
+                        #     "xpath", nf.NF_ADD_BTN_INPUT, "clickable"
+                        # )
+                        # Call function 'nf_steps_default_input' to fill up default field values
+                        self.nf_steps_default_input(
+                            step_name,
+                            nf.STEP_TYPE_IN_EXTEND_WALLET_EXPIRY,
+                            sms_voice=sms_voice_key,
+                        )
+
+                        # Input IN Serivce Field
+                        logger.info(
+                            f"Dropdwn IN Service: {196 if sms_voice_key == 'unli_sms' else 197}"
+                        )
+                        self.wd.perform_action(
+                            "xpath",
+                            f"//select[@name='in_service_id']//option[@value='{196 if sms_voice_key == 'unli_sms' else 197}']",
+                            "click",
+                        )
+
+                        # Input Expiry Field
+                        logger.info(
+                            f"Input Expiry: {int(self.bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}"
+                        )
+                        self.wd.perform_action(
+                            "xpath",
+                            f"(//input[@name='extend_step_expiries[]'])[1]",
+                            "sendkeys",
+                            f"{int(self.bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}",
+                        )
+
+                        # Section to get success message after clicking submit button
+                        element_value = self.wd.submit_form_and_wait_for_success(
+                            "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
+                        )
+
+                        logger.info(
+                            f"STEP FOR 'IN EXTEND WALLET EXPIRY' SUCCESSFULLY CREATED!"
+                        )
+
+                        # Get Steps unique ID from success message
+                        steps_id = helper.get_after_word(element_value, "step")
+                        logger.info("Step ID Collected")
+                        logger.info(
+                            f"STEP ID Retrieved: {steps_id} for IN EXTEND WALLET EXPIRY"
+                        )
+
+                        # Set Step type result into Dictionary/Object then return
+                        dict_in_prov = {
+                            f"{sms_voice_key}_id": steps_id,
+                            f"{sms_voice_key}_name": step_name,
+                        }
+                        logger.info(
+                            f"Step type 'IN EXTEND WALLET EXPIRY' result: {dict_in_prov}"
+                        )
+                        dict_in_prov_data.update(dict_in_prov)
+
+                return dict_in_prov_data
+
+            except Exception as e:
+                if retry == max_retries:
+                    logger.error(
+                        f"An error has occurred while processing Step Type IN EXTEND WALLET EXPIRY - step_type_in_extend_wallet_expiry'\n ERROR: {e}"
                     )
+                    # store rpa remark to hashmap
+                    self.bs_rpa_remark_fail[
+                        sms_voice_key.replace("unli_", "").upper()
+                    ] = "Failed"
+                    break
 
-                    # Input IN Serivce Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"//select[@name='in_service_id']//option[@value='{196 if sms_voice_key == 'unli_sms' else 197}']",
-                        "click",
-                    )
-
-                    # Input Expiry Field
-                    self.wd.perform_action(
-                        "xpath",
-                        f"(//input[@name='extend_step_expiries[]'])[1]",
-                        "sendkeys",
-                        f"{int(bs_row_data[nf.NF_INDEX_EXTEND_DURATION_IN_DAYS]) * 24}",
-                    )
-
-                    # try:
-                    #     # Click 'Add' button to submit and wait for the success message element to appear.
-                    #     logger.info("Fetching Success Message....")
-                    #     self.wd.perform_action("xpath", nf.NF_ADD_BTN_INPUT, "click")
-
-                    # except (TimeoutException, TimeoutError):
-                    #     logger.info(
-                    #         "Page took time to load the success message, refreshing page.."
-                    #     )
-                    #     self.wd.driver.refresh()
-
-                    # finally:
-                    #     # Call function to handle getting success message element
-                    #     element_value = self.get_success_message_text(
-                    #         nf.STEP_SUCCESS_MESSAGE
-                    #     )
-
-                    # Section to get success message after clicking submit button
-                    element_value = self.wd.submit_form_and_wait_for_success(
-                        "xpath", nf.NF_ADD_BTN_INPUT, nf.STEP_SUCCESS_MESSAGE
-                    )
-
-                    logger.info(
-                        f"STEP FOR 'IN EXTEND WALLET EXPIRY' SUCCESSFULLY CREATED!"
-                    )
-
-                    # Get Steps unique ID from success message
-                    steps_id = helper.get_after_word(element_value, "step")
-                    logger.info("Step ID Collected")
-                    logger.info(
-                        f"STEP ID Retrieved: {steps_id} for IN EXTEND WALLET EXPIRY"
-                    )
-
-                    # Set Step type result into Dictionary/Object then return
-                    dict_in_prov = {
-                        f"{sms_voice_key}_id": steps_id,
-                        f"{sms_voice_key}_name": step_name,
-                    }
-                    logger.info(
-                        f"Step type 'IN EXTEND WALLET EXPIRY' result: {dict_in_prov}"
-                    )
-                    dict_in_prov_data.update(dict_in_prov)
-
-            return dict_in_prov_data
-
-        except Exception as e:
-            error_msg = f"An error has occurred while processing Step Type IN EXTEND WALLET EXPIRY - step_type_in_extend_wallet_expiry'\n ERROR: {e}"
-            logger.info(error_msg)
+                # Trigger continue loop
+                retry += 1
+                logger.warning(
+                    f"Failed to create step type IN EXTEND WALLET EXPIRY - {sms_voice_key.upper()}, retrying..."
+                )
+                time.sleep(2)

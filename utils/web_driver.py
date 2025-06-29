@@ -52,7 +52,7 @@ class WebDriver:
             options.add_argument("--ignore-ssl-errors=yes")
             options.add_argument("--ignore-certificate-errors")
             options.add_argument("--log-level=3")
-            options.add_argument("--headless")
+            # options.add_argument("--headless")
 
             if platform.system() == "Linux":
                 options.add_argument("--headless")

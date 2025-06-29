@@ -15,6 +15,7 @@ nf = NfConstants()
 # Function to define the created bulk service to simple service group
 def define_bs_simple_service_group(bs_service_id, wd):
     try:
+        rpa_remark_ssg = {}
         logger.info("STARTING SIMPLE SERVICE GROUP PROCESS")
         # Redirect to Simple Service Group Details Page
         logger.info("Redirecting to Simple Service Group Detail Page...")
@@ -55,8 +56,10 @@ def define_bs_simple_service_group(bs_service_id, wd):
             )
             wd.execute_script("window.stop();")
             pass
-
+        return {}
     except Exception as e:
         logger.info(
             f"An error has occurred while defining the bulk service in simple service group\nERROR: {e}"
         )
+        rpa_remark_ssg["SSG"] = "Failed"
+        return rpa_remark_ssg

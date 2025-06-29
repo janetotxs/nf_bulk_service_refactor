@@ -34,7 +34,7 @@ def get_after_word(sentence, word):
     return next_word
 
 
-def convert_string_hashmap(value: str, convert_to: str) -> Dict | List:
+def convert_string_hashmap(value: str | Dict, convert_to: str) -> Dict | str:
     # Convert string to dict
     if convert_to == "dict":
         string_replaced = value.replace(" | ", ",").replace(": ", ",")
